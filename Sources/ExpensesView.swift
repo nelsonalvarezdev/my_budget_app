@@ -70,9 +70,23 @@ struct ExpensesView: View {
                         } label: {
                             CumulativeExpenseRow(expense: expense)
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteExpense(expense)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                         .listRowBackground(Color(hex: "00BCD4").opacity(0.25))
                     } else {
                         RecurringExpenseRow(expense: expense)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    deleteExpense(expense)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                             .listRowBackground(Color(hex: "EC407A").opacity(0.25))
                     }
                 }
@@ -103,6 +117,16 @@ struct ExpensesView: View {
 
     private var total: Decimal {
         expenses.reduce(0) { $0 + $1.amount }
+    }
+
+    /// Deletes a special expense. Cumulative expenses own their sub-expenses,
+    /// so those are removed first to avoid orphaned rows in the store.
+    private func deleteExpense(_ expense: NonFixedExpense) {
+        for subExpense in expense.subExpenses {
+            modelContext.delete(subExpense)
+        }
+        expense.subExpenses = []
+        modelContext.delete(expense)
     }
 }
 

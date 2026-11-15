@@ -16,6 +16,12 @@ enum Currency {
         return "$ \(number)"
     }
 
+    /// Formats an amount divided by 1000 to shorten it, e.g. "$ 1.710" for
+    /// 1.710.000 — used for compact parenthesized summations.
+    static func formatInThousands(_ amount: Decimal) -> String {
+        format(amount / 1000)
+    }
+
     /// Formats an amount for editing: plain digits, no grouping or symbol.
     static func formatForEditing(_ amount: Decimal) -> String {
         amount == 0 ? "" : amount.formatted(.number.grouping(.never))

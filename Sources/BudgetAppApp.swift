@@ -5,7 +5,7 @@ import SwiftData
 struct BudgetAppApp: App {
     /// Selected view, also driven by the swipe gesture so the user can move
     /// between views by dragging horizontally from the title area.
-    @State private var selectedView = 0
+    @State private var selectedView = ProcessInfo.processInfo.arguments.contains("-monthlyTab") ? 1 : 0
     /// Live horizontal offset while the user is dragging between views.
     @State private var dragOffset: CGFloat = 0
 

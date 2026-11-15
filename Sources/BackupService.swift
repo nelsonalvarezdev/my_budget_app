@@ -35,6 +35,8 @@ struct FixedExpenseDTO: Codable {
     var name: String
     var amount: Decimal
     var isChecked: Bool
+    /// Optional so backups made before this field existed still import.
+    var isIncome: Bool?
     /// Name of the assigned category; nil = uncategorized.
     var categoryName: String?
 }
@@ -73,7 +75,7 @@ enum BackupService {
 
         let fixedExpenses = try context.fetch(FetchDescriptor<FixedExpense>())
         snapshot.fixedExpenses = fixedExpenses.map {
-            FixedExpenseDTO(name: $0.name, amount: $0.amount, isChecked: $0.isChecked, categoryName: $0.category?.name)
+            FixedExpenseDTO(name: $0.name, amount: $0.amount, isChecked: $0.isChecked, isIncome: $0.isIncome, categoryName: $0.category?.name)
         }
 
         let nonFixedExpenses = try context.fetch(FetchDescriptor<NonFixedExpense>())
@@ -133,6 +135,7 @@ enum BackupService {
                     name: dto.name,
                     amount: dto.amount,
                     isChecked: dto.isChecked,
+                    isIncome: dto.isIncome ?? false,
                     category: dto.categoryName.flatMap { categoriesByName[$0] }
                 ))
             }

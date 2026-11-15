@@ -8,19 +8,53 @@ struct MonthlyView: View {
     @Query private var categories: [ExpenseCategory]
 
     @State private var isShowingAddSheet = false
+    @State private var isShowingAddIncomeSheet = false
     @State private var editingExpense: FixedExpense?
     @State private var isShowingCategoryManager = false
+
+    /// Parenthesized summations (e.g. "($ 8.080.000)") render 30% smaller
+    /// than the subheadline they used; scales with Dynamic Type.
+    @ScaledMetric(relativeTo: .subheadline) private var smallSummationSize: CGFloat = 15 * 0.7
+
+    private var smallSummationFont: Font {
+        .system(size: smallSummationSize, weight: .regular, design: .default).monospacedDigit()
+    }
 
     private var monthlyIncome: Decimal {
         Decimal(string: monthlyIncomeText) ?? 0
     }
 
+    private var expenses: [FixedExpense] {
+        fixedExpenses.filter { !$0.isIncome }
+    }
+
+    private var incomes: [FixedExpense] {
+        fixedExpenses.filter(\.isIncome)
+    }
+
+    /// Net total of checked rows: checked expenses minus checked incomes.
     private var checkedTotal: Decimal {
-        fixedExpenses.filter(\.isChecked).reduce(0) { $0 + $1.amount }
+        let checkedExpenses = expenses.filter(\.isChecked).reduce(0) { $0 + $1.amount }
+        let checkedIncomes = incomes.filter(\.isChecked).reduce(0) { $0 + $1.amount }
+        return checkedExpenses - checkedIncomes
+    }
+
+    /// Net total of every created row, regardless of checked state.
+    /// Computed on creation, so it updates as soon as an item is added.
+    private var createdNetTotal: Decimal {
+        let createdExpenses = expenses.reduce(0) { $0 + $1.amount }
+        let createdIncomes = incomes.reduce(0) { $0 + $1.amount }
+        return createdExpenses - createdIncomes
     }
 
     private var remaining: Decimal {
         monthlyIncome - checkedTotal
+    }
+
+    /// Remaining if every created item were counted at once, without
+    /// waiting for rows to be checked.
+    private var onCreationRemaining: Decimal {
+        monthlyIncome - createdNetTotal
     }
 
     var body: some View {
@@ -36,8 +70,11 @@ struct MonthlyView: View {
                     }
 
                     HStack {
-                        Text("Fixed expenses")
+                        Text("Monthly expenses")
                         Spacer()
+                        Text("(\(Currency.formatInThousands(createdNetTotal)))")
+                            .font(smallSummationFont)
+                            .foregroundStyle(.purple)
                         Text(Currency.format(checkedTotal))
                             .font(.title3.monospacedDigit())
                             .foregroundStyle(.secondary)
@@ -47,6 +84,9 @@ struct MonthlyView: View {
                         Text("Remaining")
                             .font(.headline)
                         Spacer()
+                        Text("(\(Currency.formatInThousands(onCreationRemaining)))")
+                            .font(smallSummationFont)
+                            .foregroundStyle(.purple)
                         Text(Currency.format(remaining))
                             .font(.title3.bold().monospacedDigit())
                             .foregroundStyle(remaining >= 0 ? Color.green : Color.red)
@@ -54,7 +94,7 @@ struct MonthlyView: View {
                 } header: {
                     Text("Income")
                 } footer: {
-                    Text("Set your monthly income here (in pesos). Checked expenses below are subtracted from it: \(Currency.format(checkedTotal)).")
+                    Text("Set your monthly income here (in pesos). Checked rows below are subtracted from it: \(Currency.format(checkedTotal)).")
                 }
 
                 Section {
@@ -108,15 +148,52 @@ struct MonthlyView: View {
                         }
                     }
                 } header: {
-                    Text("Fixed expenses")
+                    Text("Monthly expenses")
+                }
+
+                Section {
+                    ForEach(incomes) { income in
+                        FixedExpenseRow(expense: income)
+                            .listRowBackground(Color.green.opacity(0.15))
+                            .contentShape(Rectangle())
+                            .onTapGesture { editingExpense = income }
+                            .contextMenu {
+                                Button("Edit…") { editingExpense = income }
+                                Button(role: .destructive) {
+                                    deleteExpense(income)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button("Edit") { editingExpense = income }
+                                    .tint(.blue)
+                                Button(role: .destructive) {
+                                    deleteExpense(income)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                    }
+                } header: {
+                    Text("Incomes")
                 }
             }
             .navigationTitle("Monthly")
             .dismissKeyboardOnTap()
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        isShowingAddSheet = true
+                    Menu {
+                        Button {
+                            isShowingAddSheet = true
+                        } label: {
+                            Label("Add expense", systemImage: "minus.circle")
+                        }
+                        Button {
+                            isShowingAddIncomeSheet = true
+                        } label: {
+                            Label("Add income", systemImage: "plus.circle")
+                        }
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -142,6 +219,9 @@ struct MonthlyView: View {
             .sheet(isPresented: $isShowingAddSheet) {
                 AddEditFixedExpenseView()
             }
+            .sheet(isPresented: $isShowingAddIncomeSheet) {
+                AddEditFixedExpenseView(createsIncome: true)
+            }
             .sheet(item: $editingExpense) { expense in
                 AddEditFixedExpenseView(expense: expense)
             }
@@ -154,8 +234,8 @@ struct MonthlyView: View {
 
     /// Expenses grouped by category in category order; uncategorized last.
     private var groupedExpenses: [(key: String, color: Color?, expenses: [FixedExpense])] {
-        let categorized = fixedExpenses.filter { $0.category != nil }
-        let uncategorized = fixedExpenses.filter { $0.category == nil }
+        let categorized = expenses.filter { $0.category != nil }
+        let uncategorized = expenses.filter { $0.category == nil }
 
         // Group by category identity, preserving category order.
         var groups: [(key: String, color: Color?, expenses: [FixedExpense])] = []

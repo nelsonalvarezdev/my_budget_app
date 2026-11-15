@@ -8,6 +8,11 @@ struct AddEditFixedExpenseView: View {
 
     /// Pass an existing expense to edit it; leave nil to create a new one.
     var expense: FixedExpense?
+    /// True when the sheet creates a new income instead of an expense.
+    var createsIncome = false
+
+    /// Whether this sheet is handling an income (new or existing).
+    private var isIncome: Bool { createsIncome || expense?.isIncome == true }
 
     @State private var name = ""
     @State private var amountText = ""
@@ -28,18 +33,20 @@ struct AddEditFixedExpenseView: View {
                         .frame(width: 160)
                 }
 
-                Picker("Category", selection: $selectedCategory) {
-                    Text("None").tag(ExpenseCategory?.none)
-                    ForEach(categories) { category in
-                        HStack {
-                            Circle().fill(category.color).frame(width: 14, height: 14)
-                            Text(category.name)
+                if !isIncome {
+                    Picker("Category", selection: $selectedCategory) {
+                        Text("None").tag(ExpenseCategory?.none)
+                        ForEach(categories) { category in
+                            HStack {
+                                Circle().fill(category.color).frame(width: 14, height: 14)
+                                Text(category.name)
+                            }
+                            .tag(ExpenseCategory?.some(category))
                         }
-                        .tag(ExpenseCategory?.some(category))
                     }
                 }
             }
-            .navigationTitle(expense == nil ? "Add Expense" : "Edit Expense")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .dismissKeyboardOnTap()
             .toolbar {
@@ -59,6 +66,11 @@ struct AddEditFixedExpenseView: View {
         !name.isEmpty && (Decimal(string: amountText) ?? 0) > 0
     }
 
+    private var title: String {
+        let verb = expense == nil ? "Add" : "Edit"
+        return isIncome ? "\(verb) Income" : "\(verb) Expense"
+    }
+
     private func populate() {
         guard let expense else { return }
         name = expense.name
@@ -74,7 +86,7 @@ struct AddEditFixedExpenseView: View {
             expense.amount = amount
             expense.category = selectedCategory
         } else {
-            modelContext.insert(FixedExpense(name: name, amount: amount, category: selectedCategory))
+            modelContext.insert(FixedExpense(name: name, amount: amount, isIncome: isIncome, category: selectedCategory))
         }
         dismiss()
     }

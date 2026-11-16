@@ -4,7 +4,6 @@ import SwiftData
 /// Monthly tab: checklist of fixed expenses and fixed incomes against the
 /// monthly income.
 struct MonthlyView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(AccountsStore.self) private var accounts
     /// Every Monthly item: fixed expenses and fixed incomes.
     @Query private var items: [FixedExpense]
@@ -70,8 +69,6 @@ struct MonthlyView: View {
                         ForEach(group.expenses) { expense in
                             FixedExpenseRow(expense: expense)
                                 .listRowBackground(rowBackground(for: expense))
-                                .contentShape(Rectangle())
-                                .onTapGesture { viewModel.editingItem = expense }
                                 .contextMenu {
                                     Menu {
                                         Button {
@@ -112,8 +109,6 @@ struct MonthlyView: View {
                     ForEach(viewModel.incomes(items)) { income in
                         FixedExpenseRow(expense: income)
                             .listRowBackground(Color.green.opacity(0.15))
-                            .contentShape(Rectangle())
-                            .onTapGesture { viewModel.editingItem = income }
                             .contextMenu {
                                 editAndDeleteButtons(for: income, editTitle: "Edit…")
                             }
@@ -160,7 +155,6 @@ struct MonthlyView: View {
             .sheet(isPresented: $viewModel.isShowingCategoryManager) {
                 CategoryManagerView()
             }
-            .task { seedMockDataIfNeeded(); seedDefaultCategoriesIfNeeded() }
         }
     }
 
@@ -183,42 +177,12 @@ struct MonthlyView: View {
         if expense.isChecked { return Color.green.opacity(0.18) }
         return Color.clear
     }
-
-    /// Seeds a one-time mock list of fixed expenses on first launch.
-    private func seedMockDataIfNeeded() {
-        let hasExpenses = (try? modelContext.fetchCount(FetchDescriptor<FixedExpense>())) ?? 0 > 0
-        guard !hasExpenses else { return }
-
-        // Original USD amounts converted at 1 USD = 3,200 COP.
-        let mockExpenses: [(String, Decimal)] = [
-            ("Rent/Arriendo", 4_800_000),      // $1,500
-            ("Groceries", 1_440_000),          // $450
-            ("Utilities", 384_000),            // $120
-            ("Internet", 192_000),             // $60
-            ("Phone", 144_000),                // $45
-            ("Transport", 352_000),            // $110
-            ("Streaming services", 80_000),    // $25
-            ("Gym membership", 112_000),       // $35
-            ("Insurance", 480_000),            // $150
-            ("Subscriptions", 96_000),         // $30
-        ]
-        for (name, amount) in mockExpenses {
-            modelContext.insert(FixedExpense(name: name, amount: amount))
-        }
-    }
-
-    /// Ensures the app's built-in default categories always exist.
-    /// Runs on every launch: if the user deleted one, it is restored.
-    private func seedDefaultCategoriesIfNeeded() {
-        let existingNames = Set(categories.map(\.name))
-        for (name, colorHex) in ExpenseCategory.defaults where !existingNames.contains(name) {
-            modelContext.insert(ExpenseCategory(name: name, colorHex: colorHex))
-        }
-    }
 }
 
 // MARK: - Checklist row
 
+/// Tapping anywhere on the row toggles its check. Editing is available
+/// through the swipe actions and the long-press menu.
 struct FixedExpenseRow: View {
     @Bindable var expense: FixedExpense
 

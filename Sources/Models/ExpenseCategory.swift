@@ -38,6 +38,16 @@ final class ExpenseCategory {
         ("Savings", "#FBC02D"),        // yellow — setting money aside
     ]
 
+    /// Ensures the built-in default categories exist; a missing one is
+    /// re-created. Called at every launch.
+    static func ensureDefaultsExist(in context: ModelContext) {
+        let existing = (try? context.fetch(FetchDescriptor<ExpenseCategory>())) ?? []
+        let existingNames = Set(existing.map(\.name))
+        for (name, colorHex) in defaults where !existingNames.contains(name) {
+            context.insert(ExpenseCategory(name: name, colorHex: colorHex))
+        }
+    }
+
     /// Special categories offered only in the "More expenses" view. They are
     /// not stored in the category store, cannot be edited or deleted, and
     /// always keep their fixed color.

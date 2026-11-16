@@ -40,25 +40,6 @@ struct ExpensesView: View {
             .sheet(isPresented: $viewModel.isShowingAddSheet) {
                 AddMoreExpenseView()
             }
-            .task { seedMockDataIfNeeded() }
-        }
-    }
-
-    /// Seeds a one-time mock list of 5 non-fixed expenses on first launch.
-    private func seedMockDataIfNeeded() {
-        let hasExpenses = (try? modelContext.fetchCount(FetchDescriptor<NonFixedExpense>())) ?? 0 > 0
-        guard !hasExpenses else { return }
-
-        // Original USD amounts converted at 1 USD = 3,200 COP.
-        let mockExpenses: [(String, Decimal)] = [
-            ("Dinner with friends", 120_000),   // $37.50
-            ("Movie tickets", 64_000),          // $20
-            ("Taxi rides", 96_000),             // $30
-            ("Gift for a friend", 160_000),     // $50
-            ("Home repair", 320_000),           // $50
-        ]
-        for (name, amount) in mockExpenses {
-            modelContext.insert(NonFixedExpense(name: name, amount: amount))
         }
     }
 

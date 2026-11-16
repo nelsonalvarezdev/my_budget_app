@@ -28,7 +28,7 @@ struct BudgetAppApp: App {
                 // rest behind the bar regardless of scroll position.
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
-                        MonthView()
+                        TransactionsView()
                             .frame(width: pageWidth)
                         MonthlyView()
                             .frame(width: pageWidth)

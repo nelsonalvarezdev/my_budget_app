@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct MonthView: View {
+struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var transactions: [Transaction]
 
@@ -253,6 +253,7 @@ struct MonthView: View {
 }
 
 #Preview {
-    MonthView()
+    TransactionsView()
+        .environment(AccountsStore())
         .modelContainer(for: Transaction.self, inMemory: true)
 }

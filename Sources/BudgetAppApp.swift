@@ -19,9 +19,12 @@ struct BudgetAppApp: App {
         WindowGroup {
             GeometryReader { proxy in
                 let pageWidth = proxy.size.width
-                ZStack(alignment: .bottom) {
-                    // Paged content, constrained to one screen width so the
-                    // wide HStack can slide behind the tab bar.
+                // Paged content constrained to one screen width so the wide
+                // HStack can slide between views. The tab bar is a VStack
+                // sibling (not an overlay/inset): the pages physically get
+                // the remaining height, so list rows can never scroll or
+                // rest behind the bar regardless of scroll position.
+                VStack(spacing: 0) {
                     HStack(spacing: 0) {
                         MonthView()
                             .frame(width: pageWidth)
@@ -33,11 +36,11 @@ struct BudgetAppApp: App {
                     .offset(x: -CGFloat(selectedView) * pageWidth + dragOffset)
                     .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedView)
                     .frame(width: pageWidth, alignment: .leading)
+                    .overlay(alignment: .top) {
+                        titleSwipeStrip
+                    }
 
                     tabBar
-                }
-                .overlay(alignment: .top) {
-                    titleSwipeStrip
                 }
             }
         }

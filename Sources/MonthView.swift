@@ -13,6 +13,8 @@ struct MonthView: View {
 
     @State private var displayedMonth: Date = .now
     @State private var isShowingAddSheet = false
+    @State private var isShowingReport = false
+    @State private var isShowingDeleteAllConfirmation = false
     @State private var isShowingBackupMenu = false
     @State private var backupFile: BackupFile?
     @State private var isShowingImporter = false
@@ -79,6 +81,11 @@ struct MonthView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
+                            isShowingReport = true
+                        } label: {
+                            Label("Monthly report", systemImage: "doc.text")
+                        }
+                        Button {
                             exportBackup()
                         } label: {
                             Label("Export data…", systemImage: "square.and.arrow.up")
@@ -88,6 +95,12 @@ struct MonthView: View {
                         } label: {
                             Label("Import data…", systemImage: "square.and.arrow.down")
                         }
+                        Divider()
+                        Button(role: .destructive) {
+                            isShowingDeleteAllConfirmation = true
+                        } label: {
+                            Label("Delete all transactions", systemImage: "trash")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -95,6 +108,9 @@ struct MonthView: View {
             }
             .sheet(isPresented: $isShowingAddSheet) {
                 AddTransactionView()
+            }
+            .sheet(isPresented: $isShowingReport) {
+                MonthlyReportView(month: displayedMonth, transactions: monthTransactions)
             }
             .fileExporter(
                 isPresented: $isShowingBackupMenu,
@@ -123,6 +139,12 @@ struct MonthView: View {
                 Button("Import", role: .destructive) { importBackup() }
             } message: {
                 Text("Importing replaces everything currently in the app with the backup's contents.")
+            }
+            .alert("Delete all transactions?", isPresented: $isShowingDeleteAllConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete all", role: .destructive) { deleteAllTransactions() }
+            } message: {
+                Text("Every transaction in the app will be removed. This does not change the Balance.")
             }
             .alert(backupMessage ?? "", isPresented: $isShowingBackupResult) {
                 Button("OK", role: .cancel) {}
@@ -221,6 +243,15 @@ struct MonthView: View {
     private func deleteTransactions(group: DayGroup, at offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(group.transactions[index])
+        }
+    }
+
+    /// Removes every transaction in the store. The Balance is unaffected:
+    /// it is computed from Cash/Savings and the non-fixed items, not from
+    /// transactions.
+    private func deleteAllTransactions() {
+        for transaction in transactions {
+            modelContext.delete(transaction)
         }
     }
 }

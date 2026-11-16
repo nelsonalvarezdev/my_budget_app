@@ -8,7 +8,6 @@ struct MonthlyView: View {
     @Query private var categories: [ExpenseCategory]
 
     @State private var isShowingAddSheet = false
-    @State private var isShowingAddIncomeSheet = false
     @State private var editingExpense: FixedExpense?
     @State private var isShowingCategoryManager = false
     /// Set while the user holds tap on a summary row; shows the estimated
@@ -196,17 +195,8 @@ struct MonthlyView: View {
             .dismissKeyboardOnTap()
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button {
-                            isShowingAddSheet = true
-                        } label: {
-                            Label("Add expense", systemImage: "minus.circle")
-                        }
-                        Button {
-                            isShowingAddIncomeSheet = true
-                        } label: {
-                            Label("Add income", systemImage: "plus.circle")
-                        }
+                    Button {
+                        isShowingAddSheet = true
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -231,9 +221,6 @@ struct MonthlyView: View {
             }
             .sheet(isPresented: $isShowingAddSheet) {
                 AddEditFixedExpenseView()
-            }
-            .sheet(isPresented: $isShowingAddIncomeSheet) {
-                AddEditFixedExpenseView(createsIncome: true)
             }
             .sheet(item: $editingExpense) { expense in
                 AddEditFixedExpenseView(expense: expense)

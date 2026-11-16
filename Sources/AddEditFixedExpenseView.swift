@@ -8,8 +8,9 @@ struct AddEditFixedExpenseView: View {
 
     /// Pass an existing expense to edit it; leave nil to create a new one.
     var expense: FixedExpense?
-    /// True when the sheet creates a new income instead of an expense.
-    var createsIncome = false
+    /// Whether a new entry starts as an income; the user can switch it with
+    /// the segmented control while adding. State so the control can change it.
+    @State private var createsIncome: Bool
 
     /// Whether this sheet is handling an income (new or existing).
     private var isIncome: Bool { createsIncome || expense?.isIncome == true }
@@ -18,9 +19,29 @@ struct AddEditFixedExpenseView: View {
     @State private var amountText = ""
     @State private var selectedCategory: ExpenseCategory?
 
+    init(expense: FixedExpense? = nil, createsIncome: Bool = false) {
+        self.expense = expense
+        _createsIncome = State(initialValue: createsIncome)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
+                // Income/Expense tabs, same style as the other add modals.
+                // Only shown while adding: an existing row keeps its type.
+                if expense == nil {
+                    Picker("Type", selection: Binding(
+                        get: { isIncome ? TransactionKind.income : .expense },
+                        set: { createsIncome = $0 == .income }
+                    )) {
+                        ForEach(TransactionKind.allCases) { kind in
+                            Text(kind.label).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                }
+
                 TextField("Name (e.g. Rent)", text: $name)
                     .autocorrectionDisabled()
                 HStack {

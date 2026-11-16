@@ -1,9 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// Tab for registering non-fixed (variable) expenses. Each row is editable
-/// in place (Expense / Amount columns) and has a delete button. All of these
-/// expenses discount from the monthly income field on the Monthly tab.
+/// Tab for registering non-fixed (variable) expenses and incomes. The list
+/// shows expenses first, then Incomming items below. Each row is editable in
+/// place (Expense / Amount columns) and has a delete button. Expenses
+/// discount from the balance; incomes are added to it.
 struct ExpensesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var expenses: [NonFixedExpense]
@@ -15,12 +16,12 @@ struct ExpensesView: View {
             Group {
                 if expenses.isEmpty {
                     ContentUnavailableView(
-                        "No expenses yet",
+                        "No entries yet",
                         systemImage: "cart",
-                        description: Text("Tap + to register a non-fixed expense.")
+                        description: Text("Tap + to register a non-fixed expense or income.")
                     )
                 } else {
-                    expenseList
+                    entryList
                 }
             }
             .navigationTitle("More expenses")
@@ -59,36 +60,12 @@ struct ExpensesView: View {
         }
     }
 
-    private var expenseList: some View {
+    private var entryList: some View {
         List {
             Section {
                 // Special-category expenses first (Cumulative, Recurring).
                 ForEach(specialExpenses) { expense in
-                    if expense.isCumulative {
-                        NavigationLink {
-                            SubExpensesView(expense: expense)
-                        } label: {
-                            CumulativeExpenseRow(expense: expense)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                deleteExpense(expense)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .listRowBackground(Color(hex: "00BCD4").opacity(0.25))
-                    } else {
-                        RecurringExpenseRow(expense: expense)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    deleteExpense(expense)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                            .listRowBackground(Color(hex: "EC407A").opacity(0.25))
-                    }
+                    specialRow(for: expense)
                 }
                 ForEach(plainExpenses) { expense in
                     NonFixedExpenseRow(expense: expense)
@@ -102,21 +79,92 @@ struct ExpensesView: View {
                 .font(.subheadline.weight(.semibold))
                 .textCase(nil)
             } footer: {
-                Text("Total: \(Currency.format(total)). Positive amounts reduce the Balance; negative amounts are credits that increase it.")
+                Text("Total: \(Currency.format(expensesTotal)). Positive amounts reduce the Balance; negative amounts are credits that increase it.")
+            }
+
+            // Incomming items, listed after the expenses. Special-category
+            // incomes behave exactly like their expense counterparts.
+            if !incomes.isEmpty {
+                Section {
+                    ForEach(specialIncomes) { income in
+                        specialRow(for: income)
+                    }
+                    ForEach(plainIncomes) { income in
+                        NonFixedExpenseRow(expense: income)
+                    }
+                } header: {
+                    HStack {
+                        Text("Incomming")
+                        Spacer()
+                        Text("Amount")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .textCase(nil)
+                } footer: {
+                    Text("Total: \(Currency.format(incomesTotal)). These amounts are added to the Balance on the Transactions view.")
+                }
             }
         }
     }
 
+    /// Row for a special-category entry: Cumulative navigates to its
+    /// sub-values; Recurring shows the × multiplier stepper. Same styling
+    /// for expenses and incomes.
+    @ViewBuilder
+    private func specialRow(for expense: NonFixedExpense) -> some View {
+        if expense.isCumulative {
+            NavigationLink {
+                SubExpensesView(expense: expense)
+            } label: {
+                CumulativeExpenseRow(expense: expense)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    deleteExpense(expense)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .listRowBackground(Color(hex: "00BCD4").opacity(0.25))
+        } else {
+            RecurringExpenseRow(expense: expense)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        deleteExpense(expense)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .listRowBackground(Color(hex: "EC407A").opacity(0.25))
+        }
+    }
+
     private var specialExpenses: [NonFixedExpense] {
-        expenses.filter { $0.isCumulative || $0.isRecurring }
+        expenses.filter { !$0.isIncome && ($0.isCumulative || $0.isRecurring) }
     }
 
     private var plainExpenses: [NonFixedExpense] {
-        expenses.filter { !$0.isCumulative && !$0.isRecurring }
+        expenses.filter { !$0.isIncome && !$0.isCumulative && !$0.isRecurring }
     }
 
-    private var total: Decimal {
-        expenses.reduce(0) { $0 + $1.amount }
+    private var specialIncomes: [NonFixedExpense] {
+        incomes.filter { $0.isCumulative || $0.isRecurring }
+    }
+
+    private var plainIncomes: [NonFixedExpense] {
+        incomes.filter { !$0.isCumulative && !$0.isRecurring }
+    }
+
+    private var incomes: [NonFixedExpense] {
+        expenses.filter(\.isIncome)
+    }
+
+    private var expensesTotal: Decimal {
+        expenses.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
+    }
+
+    private var incomesTotal: Decimal {
+        incomes.reduce(0) { $0 + $1.amount }
     }
 
     /// Deletes a special expense. Cumulative expenses own their sub-expenses,

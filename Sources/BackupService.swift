@@ -52,6 +52,8 @@ struct NonFixedExpenseDTO: Codable {
     var isRecurring: Bool?
     var baseAmount: Decimal?
     var multiplier: Int?
+    /// Optional so backups made before this field existed still import.
+    var isIncome: Bool?
 }
 
 struct CategoryDTO: Codable {
@@ -87,7 +89,8 @@ enum BackupService {
                 subExpenses: $0.subExpenses.map(\.value),
                 isRecurring: $0.isRecurring,
                 baseAmount: $0.baseAmount,
-                multiplier: $0.multiplier
+                multiplier: $0.multiplier,
+                isIncome: $0.isIncome
             )
         }
 
@@ -145,7 +148,8 @@ enum BackupService {
                     name: dto.name,
                     amount: dto.amount,
                     isCumulative: dto.isCumulative ?? false,
-                    isRecurring: dto.isRecurring ?? false
+                    isRecurring: dto.isRecurring ?? false,
+                    isIncome: dto.isIncome ?? false
                 )
                 for value in dto.subExpenses ?? [] {
                     expense.subExpenses.append(SubExpense(value: value))

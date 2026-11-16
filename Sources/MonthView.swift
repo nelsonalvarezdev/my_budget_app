@@ -191,11 +191,13 @@ struct MonthView: View {
             }
         }
 
-        // Balance = (Cash + Savings) − Expenses-tab total.
+        // Balance = (Cash + Savings) − Expenses-tab total + Incomes-tab total.
         let cash = Decimal(string: cashBalanceText) ?? 0
         let savings = Decimal(string: savingsBalanceText) ?? 0
-        let nonFixedSum = ((try? modelContext.fetch(FetchDescriptor<NonFixedExpense>())) ?? []).reduce(0) { $0 + $1.amount }
-        summary.balance = cash + savings - nonFixedSum
+        let nonFixed = (try? modelContext.fetch(FetchDescriptor<NonFixedExpense>())) ?? []
+        let nonFixedExpenses = nonFixed.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
+        let nonFixedIncomes = nonFixed.filter(\.isIncome).reduce(0) { $0 + $1.amount }
+        summary.balance = cash + savings - nonFixedExpenses + nonFixedIncomes
         return summary
     }
 
@@ -228,8 +230,9 @@ struct MonthView: View {
 struct MonthSummary {
     var income: Decimal = 0
     var expenses: Decimal = 0
-    /// Balance = (Cash + Savings) − total of the Expenses tab (non-fixed).
-    /// Transaction income/expenses are informational and don't feed this.
+    /// Balance = (Cash + Savings) − total of the Expenses tab + total of the
+    /// Incomes tab (both non-fixed). Transaction income/expenses are
+    /// informational and don't feed this.
     var balance: Decimal = 0
 }
 

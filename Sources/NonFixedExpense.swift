@@ -24,12 +24,17 @@ final class NonFixedExpense {
     /// Multiplier applied to `baseAmount`; starts at 1 and is changed with
     /// the row's +/− stepper. `amount` always equals baseAmount × multiplier.
     var multiplier: Int = 1
+    /// True when this row is an income instead of an expense: its amount is
+    /// added to the balance on the Transactions view instead of subtracted.
+    /// Defaults to false so existing rows survive the schema change.
+    var isIncome: Bool = false
 
-    init(name: String, amount: Decimal, isCumulative: Bool = false, isRecurring: Bool = false) {
+    init(name: String, amount: Decimal, isCumulative: Bool = false, isRecurring: Bool = false, isIncome: Bool = false) {
         self.name = name
         self.amount = amount
         self.isCumulative = isCumulative
         self.isRecurring = isRecurring
+        self.isIncome = isIncome
         if isRecurring {
             self.baseAmount = amount
         }

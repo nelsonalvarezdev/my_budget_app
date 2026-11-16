@@ -27,9 +27,9 @@ struct MonthlyReportView: View {
 
                 if !expenseByCategory.isEmpty {
                     Section {
-                        ForEach(expenseByCategory, id: \.key) { group in
+                        ForEach(expenseByCategory, id: \.category) { group in
                             HStack {
-                                Text(group.key)
+                                Text(group.category)
                                 Spacer()
                                 Text(Currency.format(group.total))
                                     .font(.body.monospacedDigit())
@@ -43,9 +43,9 @@ struct MonthlyReportView: View {
 
                 if !incomeByCategory.isEmpty {
                     Section {
-                        ForEach(incomeByCategory, id: \.key) { group in
+                        ForEach(incomeByCategory, id: \.category) { group in
                             HStack {
-                                Text(group.key)
+                                Text(group.category)
                                 Spacer()
                                 Text(Currency.format(group.total))
                                     .font(.body.monospacedDigit())
@@ -94,26 +94,19 @@ struct MonthlyReportView: View {
     }
 
     private var totalIncome: Decimal {
-        transactions.filter { $0.kind == .income }.reduce(0) { $0 + $1.amount }
+        TransactionRules.totals(transactions).income
     }
 
     private var totalExpenses: Decimal {
-        transactions.filter { $0.kind == .expense }.reduce(0) { $0 + $1.amount }
+        TransactionRules.totals(transactions).expenses
     }
 
-    private var expenseByCategory: [(key: String, total: Decimal)] {
-        totalsByCategory(kind: .expense)
+    private var expenseByCategory: [CategoryTotal] {
+        TransactionRules.totalsByCategory(transactions, kind: .expense)
     }
 
-    private var incomeByCategory: [(key: String, total: Decimal)] {
-        totalsByCategory(kind: .income)
-    }
-
-    private func totalsByCategory(kind: TransactionKind) -> [(key: String, total: Decimal)] {
-        let grouped = Dictionary(grouping: transactions.filter { $0.kind == kind }, by: \.category)
-        return grouped
-            .map { category, group in (key: category, total: group.reduce(0) { $0 + $1.amount }) }
-            .sorted { $0.total > $1.total }
+    private var incomeByCategory: [CategoryTotal] {
+        TransactionRules.totalsByCategory(transactions, kind: .income)
     }
 
     private var monthTitle: String {

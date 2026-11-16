@@ -1,59 +1,21 @@
 import SwiftUI
 import SwiftData
 
+/// Monthly tab: checklist of fixed expenses and fixed incomes against the
+/// monthly income.
 struct MonthlyView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AccountsStore.self) private var accounts
-    @Query private var fixedExpenses: [FixedExpense]
+    /// Every Monthly item: fixed expenses and fixed incomes.
+    @Query private var items: [FixedExpense]
     @Query private var categories: [ExpenseCategory]
 
-    @State private var isShowingAddSheet = false
-    @State private var editingExpense: FixedExpense?
-    @State private var isShowingCategoryManager = false
-    /// Set while the user holds tap on a summary row; shows the estimated
-    /// figure with a brief description in a popover. One per row so each
-    /// popover has its own anchor and binding.
-    @State private var expensesDetails: EstimatedDetails?
-    @State private var remainingDetails: EstimatedDetails?
-
-    private var monthlyIncome: Decimal {
-        accounts.monthlyIncome
-    }
-
-    private var expenses: [FixedExpense] {
-        fixedExpenses.filter { !$0.isIncome }
-    }
-
-    private var incomes: [FixedExpense] {
-        fixedExpenses.filter(\.isIncome)
-    }
-
-    /// Net total of checked rows: checked expenses minus checked incomes.
-    private var checkedTotal: Decimal {
-        let checkedExpenses = expenses.filter(\.isChecked).reduce(0) { $0 + $1.amount }
-        let checkedIncomes = incomes.filter(\.isChecked).reduce(0) { $0 + $1.amount }
-        return checkedExpenses - checkedIncomes
-    }
-
-    /// Net total of every created row, regardless of checked state.
-    /// Computed on creation, so it updates as soon as an item is added.
-    private var createdNetTotal: Decimal {
-        let createdExpenses = expenses.reduce(0) { $0 + $1.amount }
-        let createdIncomes = incomes.reduce(0) { $0 + $1.amount }
-        return createdExpenses - createdIncomes
-    }
-
-    private var remaining: Decimal {
-        monthlyIncome - checkedTotal
-    }
-
-    /// Remaining if every created item were counted at once, without
-    /// waiting for rows to be checked.
-    private var onCreationRemaining: Decimal {
-        monthlyIncome - createdNetTotal
-    }
+    @State private var viewModel = MonthlyViewModel()
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+        let totals = viewModel.totals(items: items, accounts: accounts)
+
         NavigationStack {
             List {
                 Section {
@@ -68,54 +30,48 @@ struct MonthlyView: View {
                     HStack {
                         Text("Monthly expenses")
                         Spacer()
-                        Text(Currency.format(checkedTotal))
+                        Text(Currency.format(totals.checkedNet))
                             .font(.title3.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
-                    .popover(item: $expensesDetails) { details in
+                    .popover(item: $viewModel.expensesDetails) { details in
                         EstimatedDetailsPopover(details: details)
                     }
                     .onLongPressGesture(minimumDuration: 0.4) {
-                        expensesDetails = EstimatedDetails(
-                            title: "Estimated monthly expenses",
-                            amount: createdNetTotal
-                        )
+                        viewModel.showEstimatedExpenses(totals)
                     } onPressingChanged: { pressing in
-                        if !pressing { expensesDetails = nil }
+                        if !pressing { viewModel.expensesDetails = nil }
                     }
 
                     HStack {
                         Text("Remaining")
                             .font(.headline)
                         Spacer()
-                        Text(Currency.format(remaining))
+                        Text(Currency.format(totals.remaining))
                             .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(remaining >= 0 ? Color.green : Color.red)
+                            .foregroundStyle(totals.remaining >= 0 ? Color.green : Color.red)
                     }
-                    .popover(item: $remainingDetails) { details in
+                    .popover(item: $viewModel.remainingDetails) { details in
                         EstimatedDetailsPopover(details: details)
                     }
                     .onLongPressGesture(minimumDuration: 0.4) {
-                        remainingDetails = EstimatedDetails(
-                            title: "Estimated monthly remains",
-                            amount: onCreationRemaining
-                        )
+                        viewModel.showEstimatedRemaining(totals)
                     } onPressingChanged: { pressing in
-                        if !pressing { remainingDetails = nil }
+                        if !pressing { viewModel.remainingDetails = nil }
                     }
                 } header: {
                     Text("Income")
                 } footer: {
-                    Text("Set your monthly income here (in pesos). Checked rows below are subtracted from it: \(Currency.format(checkedTotal)).")
+                    Text("Set your monthly income here (in pesos). Checked rows below are subtracted from it: \(Currency.format(totals.checkedNet)).")
                 }
 
                 Section {
-                    ForEach(groupedExpenses, id: \.key) { group in
+                    ForEach(viewModel.groupedExpenses(items)) { group in
                         ForEach(group.expenses) { expense in
                             FixedExpenseRow(expense: expense)
                                 .listRowBackground(rowBackground(for: expense))
                                 .contentShape(Rectangle())
-                                .onTapGesture { editingExpense = expense }
+                                .onTapGesture { viewModel.editingItem = expense }
                                 .contextMenu {
                                     Menu {
                                         Button {
@@ -141,21 +97,10 @@ struct MonthlyView: View {
                                     } label: {
                                         Label("Assign to category", systemImage: "tag")
                                     }
-                                    Button("Edit…") { editingExpense = expense }
-                                    Button(role: .destructive) {
-                                        deleteExpense(expense)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
+                                    editAndDeleteButtons(for: expense, editTitle: "Edit…")
                                 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button("Edit") { editingExpense = expense }
-                                        .tint(.blue)
-                                    Button(role: .destructive) {
-                                        deleteExpense(expense)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
+                                    editAndDeleteButtons(for: expense, editTitle: "Edit")
                                 }
                         }
                     }
@@ -164,27 +109,16 @@ struct MonthlyView: View {
                 }
 
                 Section {
-                    ForEach(incomes) { income in
+                    ForEach(viewModel.incomes(items)) { income in
                         FixedExpenseRow(expense: income)
                             .listRowBackground(Color.green.opacity(0.15))
                             .contentShape(Rectangle())
-                            .onTapGesture { editingExpense = income }
+                            .onTapGesture { viewModel.editingItem = income }
                             .contextMenu {
-                                Button("Edit…") { editingExpense = income }
-                                Button(role: .destructive) {
-                                    deleteExpense(income)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
+                                editAndDeleteButtons(for: income, editTitle: "Edit…")
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button("Edit") { editingExpense = income }
-                                    .tint(.blue)
-                                Button(role: .destructive) {
-                                    deleteExpense(income)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
+                                editAndDeleteButtons(for: income, editTitle: "Edit")
                             }
                     }
                 } header: {
@@ -196,61 +130,50 @@ struct MonthlyView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        isShowingAddSheet = true
+                        viewModel.isShowingAddSheet = true
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
                 ToolbarItem(placement: .secondaryAction) {
                     Button {
-                        isShowingCategoryManager = true
+                        viewModel.isShowingCategoryManager = true
                     } label: {
                         Label("Categories", systemImage: "tag")
                     }
                 }
                 ToolbarItem(placement: .secondaryAction) {
                     Button {
-                        for expense in fixedExpenses where expense.isChecked {
-                            expense.isChecked = false
-                        }
+                        viewModel.uncheckAll(items)
                     } label: {
                         Label("Uncheck all", systemImage: "circle")
                     }
-                    .disabled(checkedTotal == 0)
+                    .disabled(totals.checkedNet == 0)
                 }
             }
-            .sheet(isPresented: $isShowingAddSheet) {
+            .sheet(isPresented: $viewModel.isShowingAddSheet) {
                 AddEditFixedExpenseView()
             }
-            .sheet(item: $editingExpense) { expense in
-                AddEditFixedExpenseView(expense: expense)
+            .sheet(item: $viewModel.editingItem) { item in
+                AddEditFixedExpenseView(expense: item)
             }
-            .sheet(isPresented: $isShowingCategoryManager) {
+            .sheet(isPresented: $viewModel.isShowingCategoryManager) {
                 CategoryManagerView()
             }
             .task { seedMockDataIfNeeded(); seedDefaultCategoriesIfNeeded() }
         }
     }
 
-    /// Expenses grouped by category in category order; uncategorized last.
-    private var groupedExpenses: [(key: String, color: Color?, expenses: [FixedExpense])] {
-        let categorized = expenses.filter { $0.category != nil }
-        let uncategorized = expenses.filter { $0.category == nil }
-
-        // Group by category identity, preserving category order.
-        var groups: [(key: String, color: Color?, expenses: [FixedExpense])] = []
-        for expense in categorized {
-            guard let category = expense.category else { continue }
-            if let index = groups.firstIndex(where: { $0.key == category.name }) {
-                groups[index].expenses.append(expense)
-            } else {
-                groups.append((key: category.name, color: category.color, expenses: [expense]))
-            }
+    /// Edit and Delete actions shared by the context menu and the swipe.
+    @ViewBuilder
+    private func editAndDeleteButtons(for item: FixedExpense, editTitle: String) -> some View {
+        Button(editTitle) { viewModel.editingItem = item }
+            .tint(.blue)
+        Button(role: .destructive) {
+            viewModel.delete(item)
+        } label: {
+            Label("Delete", systemImage: "trash")
         }
-        if !uncategorized.isEmpty {
-            groups.append((key: "", color: nil, expenses: uncategorized))
-        }
-        return groups
     }
 
     /// Assigned category color takes precedence; unchecked uncategorized rows
@@ -282,10 +205,6 @@ struct MonthlyView: View {
         for (name, amount) in mockExpenses {
             modelContext.insert(FixedExpense(name: name, amount: amount))
         }
-    }
-
-    private func deleteExpense(_ expense: FixedExpense) {
-        expense.modelContext?.delete(expense)
     }
 
     /// Ensures the app's built-in default categories always exist.
@@ -329,18 +248,6 @@ struct FixedExpenseRow: View {
     }
 }
 
-#Preview {
-    MonthlyView()
-        .modelContainer(for: [Transaction.self, FixedExpense.self], inMemory: true)
-}
-
-/// Estimated figure shown when the user holds tap on a summary row.
-struct EstimatedDetails: Identifiable {
-    let title: String
-    let amount: Decimal
-    var id: String { title }
-}
-
 private struct EstimatedDetailsPopover: View {
     let details: EstimatedDetails
 
@@ -355,4 +262,10 @@ private struct EstimatedDetailsPopover: View {
         .padding(16)
         .presentationCompactAdaptation(.popover)
     }
+}
+
+#Preview {
+    MonthlyView()
+        .environment(AccountsStore())
+        .modelContainer(for: [Transaction.self, FixedExpense.self], inMemory: true)
 }

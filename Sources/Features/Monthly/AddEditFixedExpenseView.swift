@@ -84,7 +84,7 @@ struct AddEditFixedExpenseView: View {
     }
 
     private var isInputValid: Bool {
-        !name.isEmpty && (Decimal(string: amountText) ?? 0) > 0
+        !name.isEmpty && (Currency.parseAmount(amountText) ?? 0) > 0
     }
 
     private var title: String {
@@ -100,7 +100,7 @@ struct AddEditFixedExpenseView: View {
     }
 
     private func save() {
-        guard let amount = Decimal(string: amountText), amount > 0 else { return }
+        guard let amount = Currency.parseAmount(amountText), amount > 0 else { return }
 
         if let expense {
             expense.name = name

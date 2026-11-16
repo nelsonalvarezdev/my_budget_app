@@ -1,75 +1,69 @@
 import SwiftUI
 import SwiftData
 
+/// Transactions tab: the day-to-day log. Creating a transaction moves the
+/// Cash / Savings fields; the pinned card shows the global Balance.
 struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var transactions: [Transaction]
-
     @Environment(AccountsStore.self) private var accounts
+    @Query private var transactions: [Transaction]
+    /// Entries of the Expenses view; they adjust the Balance.
+    @Query private var extraEntries: [NonFixedExpense]
 
-    @State private var displayedMonth: Date = .now
-    @State private var isShowingAddSheet = false
-    @State private var isShowingReport = false
-    @State private var isShowingDeleteAllConfirmation = false
-    @State private var isShowingBackupMenu = false
-    @State private var backupFile: BackupFile?
-    @State private var isShowingImporter = false
-    @State private var pendingImportURL: URL?
-    @State private var isShowingImportConfirmation = false
-    @State private var backupMessage: String?
-    @State private var isShowingBackupResult = false
+    @State private var viewModel = TransactionsViewModel()
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         NavigationStack {
             VStack(spacing: 0) {
                 // Pinned balance card: stays visible even when the list is scrolled.
-                SummaryCard(summary: monthSummary)
+                SummaryCard(summary: viewModel.summary(transactions: transactions, extraEntries: extraEntries, accounts: accounts))
                     .background(Color(.systemGroupedBackground))
 
                 List {
                     BalanceDistributionSection()
 
-                ForEach(dayGroups) { group in
-                    Section(group.dayLabel) {
-                        ForEach(group.transactions) { transaction in
-                            TransactionRow(transaction: transaction)
-                        }
-                        .onDelete { offsets in
-                            deleteTransactions(group: group, at: offsets)
+                    ForEach(viewModel.dayGroups(transactions)) { group in
+                        Section(group.dayLabel) {
+                            ForEach(group.transactions) { transaction in
+                                TransactionRow(transaction: transaction)
+                            }
+                            .onDelete { offsets in
+                                viewModel.delete(offsets.map { group.transactions[$0] }, context: modelContext)
+                            }
                         }
                     }
                 }
-                }
                 .listStyle(.insetGrouped)
             }
-            .navigationTitle(monthTitle)
+            .navigationTitle(viewModel.monthTitle)
             .navigationBarTitleDisplayMode(.inline)
             .dismissKeyboardOnTap()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        displayedMonth = Calendar.current.date(byAdding: .month, value: -1, to: displayedMonth) ?? displayedMonth
+                        viewModel.showPreviousMonth()
                     } label: {
                         Image(systemName: "chevron.left")
                     }
                 }
                 ToolbarItem(placement: .principal) {
                     Button {
-                        displayedMonth = .now
+                        viewModel.showCurrentMonth()
                     } label: {
-                        Text(monthTitle).font(.headline)
+                        Text(viewModel.monthTitle).font(.headline)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        displayedMonth = Calendar.current.date(byAdding: .month, value: 1, to: displayedMonth) ?? displayedMonth
+                        viewModel.showNextMonth()
                     } label: {
                         Image(systemName: "chevron.right")
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        isShowingAddSheet = true
+                        viewModel.isShowingAddSheet = true
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -77,23 +71,23 @@ struct TransactionsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
-                            isShowingReport = true
+                            viewModel.isShowingReport = true
                         } label: {
                             Label("Monthly report", systemImage: "doc.text")
                         }
                         Button {
-                            exportBackup()
+                            viewModel.exportBackup(context: modelContext, accounts: accounts)
                         } label: {
                             Label("Export data…", systemImage: "square.and.arrow.up")
                         }
                         Button {
-                            isShowingImporter = true
+                            viewModel.isShowingImporter = true
                         } label: {
                             Label("Import data…", systemImage: "square.and.arrow.down")
                         }
                         Divider()
                         Button(role: .destructive) {
-                            isShowingDeleteAllConfirmation = true
+                            viewModel.isShowingDeleteAllConfirmation = true
                         } label: {
                             Label("Delete all transactions", systemImage: "trash")
                         }
@@ -102,152 +96,46 @@ struct TransactionsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $isShowingAddSheet) {
+            .sheet(isPresented: $viewModel.isShowingAddSheet) {
                 AddTransactionView()
             }
-            .sheet(isPresented: $isShowingReport) {
-                MonthlyReportView(month: displayedMonth, transactions: monthTransactions)
+            .sheet(isPresented: $viewModel.isShowingReport) {
+                MonthlyReportView(month: viewModel.displayedMonth, transactions: viewModel.monthTransactions(transactions))
             }
             .fileExporter(
-                isPresented: $isShowingBackupMenu,
-                document: backupFile,
+                isPresented: $viewModel.isShowingExporter,
+                document: viewModel.backupFile,
                 contentType: .json,
                 defaultFilename: BackupService.defaultFileName
             ) { result in
-                handleExportResult(result)
+                viewModel.handleExportResult(result)
             }
             .fileImporter(
-                isPresented: $isShowingImporter,
+                isPresented: $viewModel.isShowingImporter,
                 allowedContentTypes: [.json],
                 allowsMultipleSelection: false
             ) { result in
-                switch result {
-                case .success(let urls):
-                    guard let url = urls.first else { return }
-                    pendingImportURL = url
-                    isShowingImportConfirmation = true
-                case .failure:
-                    break
-                }
+                viewModel.handleImportSelection(result)
             }
-            .alert("Replace all data?", isPresented: $isShowingImportConfirmation) {
-                Button("Cancel", role: .cancel) { pendingImportURL = nil }
-                Button("Import", role: .destructive) { importBackup() }
+            .alert("Replace all data?", isPresented: $viewModel.isShowingImportConfirmation) {
+                Button("Cancel", role: .cancel) { viewModel.cancelImport() }
+                Button("Import", role: .destructive) {
+                    viewModel.importBackup(context: modelContext, accounts: accounts)
+                }
             } message: {
                 Text("Importing replaces everything currently in the app with the backup's contents.")
             }
-            .alert("Delete all transactions?", isPresented: $isShowingDeleteAllConfirmation) {
+            .alert("Delete all transactions?", isPresented: $viewModel.isShowingDeleteAllConfirmation) {
                 Button("Cancel", role: .cancel) {}
-                Button("Delete all", role: .destructive) { deleteAllTransactions() }
+                Button("Delete all", role: .destructive) {
+                    viewModel.delete(transactions, context: modelContext)
+                }
             } message: {
                 Text("Every transaction in the app will be removed. This does not change the Balance.")
             }
-            .alert(backupMessage ?? "", isPresented: $isShowingBackupResult) {
+            .alert(viewModel.backupMessage ?? "", isPresented: $viewModel.isShowingBackupResult) {
                 Button("OK", role: .cancel) {}
             }
-        }
-    }
-
-    // MARK: - Backup actions
-
-    private func exportBackup() {
-        do {
-            let snapshot = try BackupService.makeSnapshot(context: modelContext, accounts: accounts)
-            backupFile = BackupFile(data: try BackupService.encode(snapshot))
-            isShowingBackupMenu = true
-        } catch {
-            backupMessage = "Export failed: \(error.localizedDescription)"
-            isShowingBackupResult = true
-        }
-    }
-
-    private func handleExportResult(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            backupMessage = "Backup saved to \(url.lastPathComponent)."
-        case .failure(let error):
-            if (error as? CocoaError)?.code != .userCancelled {
-                backupMessage = "Export failed: \(error.localizedDescription)"
-            }
-        }
-        isShowingBackupResult = backupMessage != nil
-    }
-
-    private func importBackup() {
-        guard let url = pendingImportURL else { return }
-        pendingImportURL = nil
-        do {
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-
-            let data = try Data(contentsOf: url)
-            let snapshot = try BackupService.decode(data)
-            try BackupService.restore(snapshot, context: modelContext, accounts: accounts)
-            backupMessage = "Data imported successfully."
-        } catch {
-            backupMessage = "Import failed: \(error.localizedDescription)"
-        }
-        isShowingBackupResult = true
-    }
-
-    // MARK: - Derived data
-
-    private var monthTitle: String {
-        displayedMonth.formatted(.dateTime.month(.wide).year())
-    }
-
-    private var monthTransactions: [Transaction] {
-        transactions.filter { Calendar.current.isDate($0.date, equalTo: displayedMonth, toGranularity: .month) }
-    }
-
-    private var monthSummary: MonthSummary {
-        var summary = MonthSummary()
-        for transaction in monthTransactions {
-            switch transaction.kind {
-            case .income: summary.income += transaction.amount
-            case .expense: summary.expenses += transaction.amount
-            }
-        }
-
-        // Balance = (Cash + Savings) − Expenses-tab total + Incomes-tab total.
-        let cash = accounts.cash
-        let savings = accounts.savings
-        let nonFixed = (try? modelContext.fetch(FetchDescriptor<NonFixedExpense>())) ?? []
-        let nonFixedExpenses = nonFixed.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
-        let nonFixedIncomes = nonFixed.filter(\.isIncome).reduce(0) { $0 + $1.amount }
-        summary.balance = cash + savings - nonFixedExpenses + nonFixedIncomes
-        return summary
-    }
-
-    private var dayGroups: [DayGroup] {
-        let grouped = Dictionary(grouping: monthTransactions) { transaction in
-            Calendar.current.startOfDay(for: transaction.date)
-        }
-        return grouped
-            .map { day, dayTransactions in
-                DayGroup(
-                    day: day,
-                    dayLabel: day.formatted(.dateTime.weekday(.wide).day()),
-                    transactions: dayTransactions.sorted { $0.date > $1.date }
-                )
-            }
-            .sorted { $0.day > $1.day }
-    }
-
-    // MARK: - Actions
-
-    private func deleteTransactions(group: DayGroup, at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(group.transactions[index])
-        }
-    }
-
-    /// Removes every transaction in the store. The Balance is unaffected:
-    /// it is computed from Cash/Savings and the non-fixed items, not from
-    /// transactions.
-    private func deleteAllTransactions() {
-        for transaction in transactions {
-            modelContext.delete(transaction)
         }
     }
 }
@@ -255,5 +143,5 @@ struct TransactionsView: View {
 #Preview {
     TransactionsView()
         .environment(AccountsStore())
-        .modelContainer(for: Transaction.self, inMemory: true)
+        .modelContainer(for: [Transaction.self, NonFixedExpense.self], inMemory: true)
 }

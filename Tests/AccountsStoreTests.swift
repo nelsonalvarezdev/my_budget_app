@@ -14,7 +14,7 @@ struct AccountsStoreTests {
     }
 
     @Test func startsEmptyAndReadsAsZero() {
-        let store = AccountsStore(defaults: makeDefaults())
+        let store = makeTestAccounts()
         #expect(store.cash == 0)
         #expect(store.savings == 0)
         #expect(store.monthlyIncome == 0)
@@ -39,7 +39,7 @@ struct AccountsStoreTests {
     }
 
     @Test func creatingTransactionsMovesTheRightField() {
-        let store = AccountsStore(defaults: makeDefaults())
+        let store = makeTestAccounts()
         store.cashText = "1000"
         store.savingsText = "2000"
 
@@ -60,7 +60,7 @@ struct AccountsStoreTests {
     }
 
     @Test func cashCanGoNegative() {
-        let store = AccountsStore(defaults: makeDefaults())
+        let store = makeTestAccounts()
         store.cashText = "100"
         store.apply(AccountDelta(cash: -250))
         #expect(store.cash == -150)

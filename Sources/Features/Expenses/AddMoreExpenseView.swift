@@ -118,26 +118,18 @@ struct AddMoreExpenseView: View {
     }
 
     private func save() {
-        let isIncome = kind == .income
-        if isCumulativeSelected {
-            // Cumulative: created with the special color and an optional
-            // initial sub-value; the total comes from sub-values added
-            // later, on top of the initial one.
-            let initial = Decimal(string: initialSubValueText.replacingOccurrences(of: ",", with: ".")) ?? 0
-            let entry = NonFixedExpense(name: name, amount: initial, isCumulative: true, isIncome: isIncome)
-            if initial != 0 {
-                entry.subExpenses.append(SubExpense(value: initial))
-            }
-            modelContext.insert(entry)
-        } else if isRecurringSelected {
-            // Recurring: the entered value is the base amount, set once;
-            // the total grows via the row's multiplier stepper.
-            let base = Decimal(string: valueText.replacingOccurrences(of: ",", with: ".")) ?? 0
-            modelContext.insert(NonFixedExpense(name: name, amount: base, isRecurring: true, isIncome: isIncome))
-        } else {
-            let amount = Decimal(string: valueText.replacingOccurrences(of: ",", with: ".")) ?? 0
-            modelContext.insert(NonFixedExpense(name: name, amount: amount, isIncome: isIncome))
-        }
+        // Cumulative: the value is an optional initial sub-value.
+        // Recurring: the value is the base amount, set once.
+        // Plain: the value is the amount, edited in place afterwards.
+        let mode: ExtraEntryMode = isCumulativeSelected ? .cumulative : (isRecurringSelected ? .recurring : .plain)
+        let typedValue = isCumulativeSelected ? initialSubValueText : valueText
+        let entry = NonFixedExpense.make(
+            name: name,
+            isIncome: kind == .income,
+            mode: mode,
+            value: Currency.parseAmount(typedValue) ?? 0
+        )
+        modelContext.insert(entry)
         dismiss()
     }
 }

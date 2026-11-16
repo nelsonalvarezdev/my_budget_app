@@ -1,27 +1,29 @@
 import SwiftUI
 import SwiftData
 
-/// Tab for registering non-fixed (variable) expenses and incomes. The list
+/// Tab for registering extra (non-fixed) expenses and incomes. The list
 /// shows expenses first, then Incomming items below. Each row is editable in
 /// place (Expense / Amount columns) and has a delete button. Expenses
 /// discount from the balance; incomes are added to it.
 struct ExpensesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var expenses: [NonFixedExpense]
+    /// Every entry of this view, expenses and incomes.
+    @Query private var entries: [NonFixedExpense]
 
-    @State private var isShowingAddSheet = false
+    @State private var viewModel = ExpensesViewModel()
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         NavigationStack {
             Group {
-                if expenses.isEmpty {
+                if entries.isEmpty {
                     ContentUnavailableView(
                         "No entries yet",
                         systemImage: "cart",
                         description: Text("Tap + to register a non-fixed expense or income.")
                     )
                 } else {
-                    entryList
+                    entryList(viewModel.sections(entries))
                 }
             }
             .navigationTitle("More expenses")
@@ -29,13 +31,13 @@ struct ExpensesView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        isShowingAddSheet = true
+                        viewModel.isShowingAddSheet = true
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $isShowingAddSheet) {
+            .sheet(isPresented: $viewModel.isShowingAddSheet) {
                 AddMoreExpenseView()
             }
             .task { seedMockDataIfNeeded() }
@@ -60,14 +62,14 @@ struct ExpensesView: View {
         }
     }
 
-    private var entryList: some View {
+    private func entryList(_ sections: ExtraEntrySections) -> some View {
         List {
             Section {
                 // Special-category expenses first (Cumulative, Recurring).
-                ForEach(specialExpenses) { expense in
+                ForEach(sections.specialExpenses) { expense in
                     specialRow(for: expense)
                 }
-                ForEach(plainExpenses) { expense in
+                ForEach(sections.plainExpenses) { expense in
                     NonFixedExpenseRow(expense: expense)
                 }
             } header: {
@@ -79,17 +81,17 @@ struct ExpensesView: View {
                 .font(.subheadline.weight(.semibold))
                 .textCase(nil)
             } footer: {
-                Text("Total: \(Currency.format(expensesTotal)). Positive amounts reduce the Balance; negative amounts are credits that increase it.")
+                Text("Total: \(Currency.format(sections.expensesTotal)). Positive amounts reduce the Balance; negative amounts are credits that increase it.")
             }
 
             // Incomming items, listed after the expenses. Special-category
             // incomes behave exactly like their expense counterparts.
-            if !incomes.isEmpty {
+            if sections.hasIncomes {
                 Section {
-                    ForEach(specialIncomes) { income in
+                    ForEach(sections.specialIncomes) { income in
                         specialRow(for: income)
                     }
-                    ForEach(plainIncomes) { income in
+                    ForEach(sections.plainIncomes) { income in
                         NonFixedExpenseRow(expense: income)
                     }
                 } header: {
@@ -101,7 +103,7 @@ struct ExpensesView: View {
                     .font(.subheadline.weight(.semibold))
                     .textCase(nil)
                 } footer: {
-                    Text("Total: \(Currency.format(incomesTotal)). These amounts are added to the Balance on the Transactions view.")
+                    Text("Total: \(Currency.format(sections.incomesTotal)). These amounts are added to the Balance on the Transactions view.")
                 }
             }
         }
@@ -119,62 +121,24 @@ struct ExpensesView: View {
                 CumulativeExpenseRow(expense: expense)
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
-                    deleteExpense(expense)
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
+                deleteButton(for: expense)
             }
             .listRowBackground(Color(hex: "00BCD4").opacity(0.25))
         } else {
             RecurringExpenseRow(expense: expense)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        deleteExpense(expense)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
+                    deleteButton(for: expense)
                 }
                 .listRowBackground(Color(hex: "EC407A").opacity(0.25))
         }
     }
 
-    private var specialExpenses: [NonFixedExpense] {
-        expenses.filter { !$0.isIncome && ($0.isCumulative || $0.isRecurring) }
-    }
-
-    private var plainExpenses: [NonFixedExpense] {
-        expenses.filter { !$0.isIncome && !$0.isCumulative && !$0.isRecurring }
-    }
-
-    private var specialIncomes: [NonFixedExpense] {
-        incomes.filter { $0.isCumulative || $0.isRecurring }
-    }
-
-    private var plainIncomes: [NonFixedExpense] {
-        incomes.filter { !$0.isCumulative && !$0.isRecurring }
-    }
-
-    private var incomes: [NonFixedExpense] {
-        expenses.filter(\.isIncome)
-    }
-
-    private var expensesTotal: Decimal {
-        expenses.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
-    }
-
-    private var incomesTotal: Decimal {
-        incomes.reduce(0) { $0 + $1.amount }
-    }
-
-    /// Deletes a special expense. Cumulative expenses own their sub-expenses,
-    /// so those are removed first to avoid orphaned rows in the store.
-    private func deleteExpense(_ expense: NonFixedExpense) {
-        for subExpense in expense.subExpenses {
-            modelContext.delete(subExpense)
+    private func deleteButton(for expense: NonFixedExpense) -> some View {
+        Button(role: .destructive) {
+            viewModel.delete(expense, context: modelContext)
+        } label: {
+            Label("Delete", systemImage: "trash")
         }
-        expense.subExpenses = []
-        modelContext.delete(expense)
     }
 }
 
@@ -205,7 +169,7 @@ struct NonFixedExpenseRow: View {
                 .onChange(of: amountText) { _, _ in commitAmount() }
 
             Button {
-                modelContext.delete(expense)
+                expense.delete(from: modelContext)
             } label: {
                 Image(systemName: "trash")
                     .foregroundStyle(.red)
@@ -233,7 +197,7 @@ struct NonFixedExpenseRow: View {
 
     /// Keeps the model in sync with the text field (accepts negative values).
     private func commitAmount() {
-        expense.amount = Decimal(string: amountText.replacingOccurrences(of: ",", with: ".")) ?? 0
+        expense.amount = Currency.parseAmount(amountText) ?? 0
     }
 }
 
@@ -279,9 +243,7 @@ struct RecurringExpenseRow: View {
             // Amount always reflects base × multiplier.
             HStack(spacing: 10) {
                 Button {
-                    guard expense.multiplier > 1 else { return }
-                    expense.multiplier -= 1
-                    expense.amount = expense.baseAmount * Decimal(expense.multiplier)
+                    expense.stepMultiplier(by: -1)
                 } label: {
                     Image(systemName: "minus.circle")
                         .foregroundStyle(.secondary)
@@ -294,8 +256,7 @@ struct RecurringExpenseRow: View {
                     .frame(minWidth: 24)
 
                 Button {
-                    expense.multiplier += 1
-                    expense.amount = expense.baseAmount * Decimal(expense.multiplier)
+                    expense.stepMultiplier(by: 1)
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -342,15 +303,14 @@ struct EditRecurringBaseView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        expense.baseAmount = Decimal(string: baseText.replacingOccurrences(of: ",", with: ".")) ?? expense.baseAmount
-                        expense.amount = expense.baseAmount * Decimal(expense.multiplier)
+                        expense.setBaseAmount(Currency.parseAmount(baseText) ?? expense.baseAmount)
                         dismiss()
                     }
                 }
             }
             .safeAreaInset(edge: .bottom) {
                 Button(role: .destructive) {
-                    modelContext.delete(expense)
+                    expense.delete(from: modelContext)
                     dismiss()
                 } label: {
                     Label("Delete expense", systemImage: "trash")

@@ -24,11 +24,10 @@ struct SubExpensesView: View {
                     .listRowBackground(Color.clear)
                 } else {
                     ForEach(expense.subExpenses) { subExpense in
-                        SubExpenseRow(subExpense: subExpense, onCommit: recalculateTotal)
+                        SubExpenseRow(subExpense: subExpense, onCommit: expense.recalculateCumulativeTotal)
                     }
                     .onDelete { offsets in
-                        expense.subExpenses.remove(atOffsets: offsets)
-                        recalculateTotal()
+                        expense.removeSubValues(offsets.map { expense.subExpenses[$0] }, in: modelContext)
                     }
                 }
             } header: {
@@ -67,7 +66,7 @@ struct SubExpensesView: View {
         .dismissKeyboardOnTap()
         .safeAreaInset(edge: .bottom) {
             Button(role: .destructive) {
-                modelContext.delete(expense)
+                expense.delete(from: modelContext)
                 dismiss()
             } label: {
                 Label("Delete expense", systemImage: "trash")
@@ -79,22 +78,18 @@ struct SubExpensesView: View {
         }
     }
 
-    private var canAdd: Bool {
-        guard let value = Decimal(string: newValueText.replacingOccurrences(of: ",", with: ".")) else { return false }
-        return value != 0
+    /// A sub-value must be a non-zero number.
+    private var newValue: Decimal? {
+        guard let value = Currency.parseAmount(newValueText), value != 0 else { return nil }
+        return value
     }
+
+    private var canAdd: Bool { newValue != nil }
 
     private func addSubExpense() {
-        guard canAdd else { return }
-        let value = Decimal(string: newValueText.replacingOccurrences(of: ",", with: "."))!
-        expense.subExpenses.append(SubExpense(value: value))
+        guard let newValue else { return }
+        expense.addSubValue(newValue)
         newValueText = ""
-        recalculateTotal()
-    }
-
-    /// Keeps the parent expense's amount equal to the sum of sub-expenses.
-    private func recalculateTotal() {
-        expense.amount = expense.subExpenses.reduce(0) { $0 + $1.value }
     }
 }
 
@@ -134,7 +129,7 @@ struct SubExpenseRow: View {
     }
 
     private func commit() {
-        subExpense.value = Decimal(string: valueText.replacingOccurrences(of: ",", with: ".")) ?? 0
+        subExpense.value = Currency.parseAmount(valueText) ?? 0
         onCommit()
     }
 }

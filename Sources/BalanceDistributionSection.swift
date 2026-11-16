@@ -4,26 +4,18 @@ import SwiftUI
 /// distributed: Cash and Savings account balances (manually entered),
 /// plus the total available to spend (Cash + Savings).
 struct BalanceDistributionSection: View {
-    @AppStorage("cashBalance") private var cashBalanceText = ""
-    @AppStorage("savingsBalance") private var savingsBalanceText = ""
-
-    private var cashBalance: Decimal {
-        Decimal(string: cashBalanceText) ?? 0
-    }
-
-    private var savingsBalance: Decimal {
-        Decimal(string: savingsBalanceText) ?? 0
-    }
+    @Environment(AccountsStore.self) private var accounts
 
     /// Cash + Savings: the money available to expend.
     private var availableToSpend: Decimal {
-        cashBalance + savingsBalance
+        BalanceRules.availableToSpend(cash: accounts.cash, savings: accounts.savings)
     }
 
     var body: some View {
+        @Bindable var accounts = accounts
         Section {
-            BalanceField(title: "Cash", storageKey: "cashBalance")
-            BalanceField(title: "Savings account", storageKey: "savingsBalance")
+            BalanceField(title: "Cash", storedText: $accounts.cashText)
+            BalanceField(title: "Savings account", storedText: $accounts.savingsText)
 
             HStack {
                 Text("Available to spend")
@@ -47,15 +39,10 @@ struct BalanceDistributionSection: View {
 /// that moment instead of on every keystroke.
 struct BalanceField: View {
     let title: String
-    @AppStorage private var storedText: String
+    @Binding var storedText: String
     @FocusState private var isFocused: Bool
     /// Digits typed while editing; written to `storedText` only on commit.
     @State private var editingText = ""
-
-    init(title: String, storageKey: String) {
-        self.title = title
-        _storedText = AppStorage(wrappedValue: "", storageKey)
-    }
 
     private var value: Decimal {
         Decimal(string: storedText) ?? 0

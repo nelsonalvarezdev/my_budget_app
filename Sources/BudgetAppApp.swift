@@ -8,6 +8,8 @@ struct BudgetAppApp: App {
     @State private var selectedView = ProcessInfo.processInfo.arguments.contains("-monthlyTab") ? 1 : 0
     /// Live horizontal offset while the user is dragging between views.
     @State private var dragOffset: CGFloat = 0
+    /// Cash, Savings and Monthly income, shared by every view.
+    @State private var accounts = AccountsStore()
 
     private let pages: [(label: String, systemImage: String)] = [
         ("Transactions", "list.bullet.rectangle"),
@@ -44,6 +46,7 @@ struct BudgetAppApp: App {
                 }
             }
         }
+        .environment(accounts)
         .modelContainer(for: [Transaction.self, FixedExpense.self, NonFixedExpense.self, SubExpense.self, ExpenseCategory.self])
     }
 

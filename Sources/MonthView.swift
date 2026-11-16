@@ -5,11 +5,7 @@ struct MonthView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var transactions: [Transaction]
 
-    /// Observable reads of the balance fields, so the summary card updates
-    /// live while the user edits Cash / Savings (plain UserDefaults reads
-    /// don't trigger SwiftUI updates).
-    @AppStorage("cashBalance") private var cashBalanceText = ""
-    @AppStorage("savingsBalance") private var savingsBalanceText = ""
+    @Environment(AccountsStore.self) private var accounts
 
     @State private var displayedMonth: Date = .now
     @State private var isShowingAddSheet = false
@@ -156,7 +152,7 @@ struct MonthView: View {
 
     private func exportBackup() {
         do {
-            let snapshot = try BackupService.makeSnapshot(context: modelContext)
+            let snapshot = try BackupService.makeSnapshot(context: modelContext, accounts: accounts)
             backupFile = BackupFile(data: try BackupService.encode(snapshot))
             isShowingBackupMenu = true
         } catch {
@@ -186,7 +182,7 @@ struct MonthView: View {
 
             let data = try Data(contentsOf: url)
             let snapshot = try BackupService.decode(data)
-            try BackupService.restore(snapshot, context: modelContext)
+            try BackupService.restore(snapshot, context: modelContext, accounts: accounts)
             backupMessage = "Data imported successfully."
         } catch {
             backupMessage = "Import failed: \(error.localizedDescription)"
@@ -214,8 +210,8 @@ struct MonthView: View {
         }
 
         // Balance = (Cash + Savings) − Expenses-tab total + Incomes-tab total.
-        let cash = Decimal(string: cashBalanceText) ?? 0
-        let savings = Decimal(string: savingsBalanceText) ?? 0
+        let cash = accounts.cash
+        let savings = accounts.savings
         let nonFixed = (try? modelContext.fetch(FetchDescriptor<NonFixedExpense>())) ?? []
         let nonFixedExpenses = nonFixed.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
         let nonFixedIncomes = nonFixed.filter(\.isIncome).reduce(0) { $0 + $1.amount }

@@ -67,7 +67,8 @@ enum BackupService {
     static let defaultFileName = "budgetapp-backup.json"
 
     /// Builds a snapshot from the current store and settings.
-    static func makeSnapshot(context: ModelContext) throws -> BackupSnapshot {
+    @MainActor
+    static func makeSnapshot(context: ModelContext, accounts: AccountsStore) throws -> BackupSnapshot {
         var snapshot = BackupSnapshot()
 
         let transactions = try context.fetch(FetchDescriptor<Transaction>())
@@ -99,17 +100,17 @@ enum BackupService {
             CategoryDTO(name: $0.name, colorHex: $0.colorHex)
         }
 
-        let defaults = UserDefaults.standard
-        snapshot.monthlyIncome = defaults.string(forKey: "monthlyIncome") ?? ""
-        snapshot.cashBalance = defaults.string(forKey: "cashBalance") ?? ""
-        snapshot.savingsBalance = defaults.string(forKey: "savingsBalance") ?? ""
+        snapshot.monthlyIncome = accounts.monthlyIncomeText
+        snapshot.cashBalance = accounts.cashText
+        snapshot.savingsBalance = accounts.savingsText
 
         return snapshot
     }
 
     /// Replaces the entire store with the snapshot's contents.
     /// Categories are recreated first so expense→category links can be rebuilt.
-    static func restore(_ snapshot: BackupSnapshot, context: ModelContext) throws {
+    @MainActor
+    static func restore(_ snapshot: BackupSnapshot, context: ModelContext, accounts: AccountsStore) throws {
         try context.transaction {
             // Wipe current data. SubExpense is deleted before its parent
             // model so no orphaned values are left in the store.
@@ -164,10 +165,9 @@ enum BackupService {
             }
         }
 
-        let defaults = UserDefaults.standard
-        defaults.set(snapshot.monthlyIncome, forKey: "monthlyIncome")
-        defaults.set(snapshot.cashBalance, forKey: "cashBalance")
-        defaults.set(snapshot.savingsBalance, forKey: "savingsBalance")
+        accounts.monthlyIncomeText = snapshot.monthlyIncome
+        accounts.cashText = snapshot.cashBalance
+        accounts.savingsText = snapshot.savingsBalance
     }
 
     /// Encodes a snapshot to pretty-printed JSON data.

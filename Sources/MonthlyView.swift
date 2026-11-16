@@ -3,7 +3,7 @@ import SwiftData
 
 struct MonthlyView: View {
     @Environment(\.modelContext) private var modelContext
-    @AppStorage("monthlyIncome") private var monthlyIncomeText = ""
+    @Environment(AccountsStore.self) private var accounts
     @Query private var fixedExpenses: [FixedExpense]
     @Query private var categories: [ExpenseCategory]
 
@@ -17,7 +17,7 @@ struct MonthlyView: View {
     @State private var remainingDetails: EstimatedDetails?
 
     private var monthlyIncome: Decimal {
-        Decimal(string: monthlyIncomeText) ?? 0
+        accounts.monthlyIncome
     }
 
     private var expenses: [FixedExpense] {
@@ -60,7 +60,7 @@ struct MonthlyView: View {
                     HStack {
                         Text("Monthly income")
                         Spacer()
-                        CurrencyField(storedText: $monthlyIncomeText)
+                        CurrencyField(storedText: Bindable(accounts).monthlyIncomeText)
                             .font(.title3.monospacedDigit())
                             .frame(width: 160)
                     }

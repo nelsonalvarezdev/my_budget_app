@@ -4,6 +4,7 @@ import SwiftData
 struct AddTransactionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(AccountsStore.self) private var accounts
 
     /// All fixed expenses from the Monthly view, offered in the
     /// "Fixed expense" picker to prefill the form.
@@ -137,37 +138,13 @@ struct AddTransactionView: View {
     private func save() {
         guard let amount = Decimal(string: amountText), amount > 0, !trimmedName.isEmpty else { return }
         modelContext.insert(Transaction(name: trimmedName, amount: amount, kind: kind, category: category, note: note, date: date, paidWith: paidWith))
-        applyBalanceEffect(amount: amount, kind: kind, paidWith: paidWith)
+        // Creating a transaction moves the Cash / Savings fields once.
+        accounts.apply(TransactionRules.accountEffect(amount: amount, kind: kind, paidWith: paidWith))
         // Paying a fixed expense through a transaction marks it as paid
         // (checked) in the Monthly view, even if the amount was edited after
         // picking it.
         selectedFixedExpense?.isChecked = true
         dismiss()
-    }
-
-    /// NDEs immediately move the stored balance fields:
-    /// - Cash/Savings expenses subtract from their field.
-    /// - Credit-card expenses subtract from nothing (deferred payment).
-    /// - Income adds to Cash.
-    private func applyBalanceEffect(amount: Decimal, kind: TransactionKind, paidWith: PaymentSource) {
-        let defaults = UserDefaults.standard
-        switch (kind, paidWith) {
-        case (.expense, .cash):
-            adjustStoredField("cashBalance", by: -amount)
-        case (.expense, .savings):
-            adjustStoredField("savingsBalance", by: -amount)
-        case (.expense, .creditCard):
-            break
-        case (.income, _):
-            adjustStoredField("cashBalance", by: amount)
-        }
-    }
-
-    private func adjustStoredField(_ key: String, by delta: Decimal) {
-        let defaults = UserDefaults.standard
-        let current = Decimal(string: defaults.string(forKey: key) ?? "") ?? 0
-        let updated = current + delta
-        defaults.set(Currency.formatForEditing(updated), forKey: key)
     }
 }
 

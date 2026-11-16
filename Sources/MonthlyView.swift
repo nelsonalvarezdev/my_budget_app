@@ -11,14 +11,11 @@ struct MonthlyView: View {
     @State private var isShowingAddIncomeSheet = false
     @State private var editingExpense: FixedExpense?
     @State private var isShowingCategoryManager = false
-
-    /// Parenthesized summations (e.g. "($ 8.080.000)") render 30% smaller
-    /// than the subheadline they used; scales with Dynamic Type.
-    @ScaledMetric(relativeTo: .subheadline) private var smallSummationSize: CGFloat = 15 * 0.7
-
-    private var smallSummationFont: Font {
-        .system(size: smallSummationSize, weight: .regular, design: .default).monospacedDigit()
-    }
+    /// Set while the user holds tap on a summary row; shows the estimated
+    /// figure with a brief description in a popover. One per row so each
+    /// popover has its own anchor and binding.
+    @State private var expensesDetails: EstimatedDetails?
+    @State private var remainingDetails: EstimatedDetails?
 
     private var monthlyIncome: Decimal {
         Decimal(string: monthlyIncomeText) ?? 0
@@ -72,24 +69,40 @@ struct MonthlyView: View {
                     HStack {
                         Text("Monthly expenses")
                         Spacer()
-                        Text("(\(Currency.formatInThousands(createdNetTotal)))")
-                            .font(smallSummationFont)
-                            .foregroundStyle(.purple)
                         Text(Currency.format(checkedTotal))
                             .font(.title3.monospacedDigit())
                             .foregroundStyle(.secondary)
+                    }
+                    .popover(item: $expensesDetails) { details in
+                        EstimatedDetailsPopover(details: details)
+                    }
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        expensesDetails = EstimatedDetails(
+                            title: "Estimated monthly expenses",
+                            amount: createdNetTotal
+                        )
+                    } onPressingChanged: { pressing in
+                        if !pressing { expensesDetails = nil }
                     }
 
                     HStack {
                         Text("Remaining")
                             .font(.headline)
                         Spacer()
-                        Text("(\(Currency.formatInThousands(onCreationRemaining)))")
-                            .font(smallSummationFont)
-                            .foregroundStyle(.purple)
                         Text(Currency.format(remaining))
                             .font(.title3.bold().monospacedDigit())
                             .foregroundStyle(remaining >= 0 ? Color.green : Color.red)
+                    }
+                    .popover(item: $remainingDetails) { details in
+                        EstimatedDetailsPopover(details: details)
+                    }
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        remainingDetails = EstimatedDetails(
+                            title: "Estimated monthly remains",
+                            amount: onCreationRemaining
+                        )
+                    } onPressingChanged: { pressing in
+                        if !pressing { remainingDetails = nil }
                     }
                 } header: {
                     Text("Income")
@@ -332,4 +345,27 @@ struct FixedExpenseRow: View {
 #Preview {
     MonthlyView()
         .modelContainer(for: [Transaction.self, FixedExpense.self], inMemory: true)
+}
+
+/// Estimated figure shown when the user holds tap on a summary row.
+struct EstimatedDetails: Identifiable {
+    let title: String
+    let amount: Decimal
+    var id: String { title }
+}
+
+private struct EstimatedDetailsPopover: View {
+    let details: EstimatedDetails
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(details.title)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Text(Currency.format(details.amount))
+                .font(.title3.bold().monospacedDigit())
+        }
+        .padding(16)
+        .presentationCompactAdaptation(.popover)
+    }
 }

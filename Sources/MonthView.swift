@@ -256,25 +256,6 @@ struct MonthView: View {
     }
 }
 
-// MARK: - Supporting types
-
-struct MonthSummary {
-    var income: Decimal = 0
-    var expenses: Decimal = 0
-    /// Balance = (Cash + Savings) − total of the Expenses tab + total of the
-    /// Incomes tab (both non-fixed). Transaction income/expenses are
-    /// informational and don't feed this.
-    var balance: Decimal = 0
-}
-
-struct DayGroup: Identifiable {
-    let day: Date
-    let dayLabel: String
-    let transactions: [Transaction]
-
-    var id: Date { day }
-}
-
 #Preview {
     MonthView()
         .modelContainer(for: Transaction.self, inMemory: true)

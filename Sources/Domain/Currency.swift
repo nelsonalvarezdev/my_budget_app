@@ -33,4 +33,10 @@ enum Currency {
     static func isPlainAmount(_ text: String) -> Bool {
         !text.isEmpty && text.allSatisfy { $0.isNumber || $0 == "." || $0 == "," }
     }
+
+    /// Parses what the user typed in an amount field. Accepts "," as the
+    /// decimal separator; returns nil when the text is not a number.
+    static func parseAmount(_ text: String) -> Decimal? {
+        Decimal(string: text.replacingOccurrences(of: ",", with: "."))
+    }
 }

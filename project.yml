@@ -20,3 +20,19 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_CFBundleDisplayName: Budget
         SWIFT_STRICT_CONCURRENCY: complete
+    scheme:
+      testTargets:
+        - BudgetAppTests
+  BudgetAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: BudgetApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.personal.budgetapp.tests
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete

@@ -11,7 +11,7 @@ The rules in Part 1 are pinned by unit tests in `Tests/`; if a test and this doc
 
 iOS 18+, SwiftUI + SwiftData, Swift 6 (strict concurrency), no third-party dependencies. Currency is Colombian pesos, whole amounts, shown as `$ 1.500.000`.
 
-Three pages live side by side in a custom horizontal pager (`RootView`), all alive at once. You move between them with the bottom tab bar, or by swiping on the tab bar or on the strip over the navigation title. List rows keep their own gestures.
+Three pages live side by side in a custom horizontal pager (`RootView`), all alive at once. You move between them with the bottom tab bar, or by swiping horizontally from anywhere that has no other use for the drag: empty space, cards, headers, the title area and the tab bar. A row's own swipe actions win over the page swipe, so a row only pages in a direction where it has no action. Text fields, toolbar buttons, pushed detail screens and sheets do not page (`PageSwipeGesture`).
 
 | Tab | View | Model | In this document |
 |---|---|---|---|
@@ -179,7 +179,8 @@ Data                     SwiftData models · AccountsStore (UserDefaults) · Bac
 
 ```
 Sources/
-  App/            BudgetAppApp (container + AccountsStore), RootView (pager, tab bar, launch seeding)
+  App/            BudgetAppApp (container + AccountsStore), RootView (pager, tab bar, launch seeding),
+                  PageSwipeGesture (swipe between views)
   Models/         Transaction, FixedExpense, NonFixedExpense (+ SubExpense), ExpenseCategory
   Domain/         TransactionRules, BalanceRules, MonthlyTotals,
                   NonFixedExpense+Rules, ExtraEntrySections, Currency

@@ -63,7 +63,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 **List**
 
 - **Income / Spent** = sums of the displayed month's transactions. Informational only; they do not feed the Balance.
-- Each day's header shows the day's net (income − expenses). Each row has a dot in its category's colour.
+- Each day's header shows the day's net (income − expenses). Rows name their category in text, so they carry no colour dot.
 - New transactions are added with the floating + button.
 
 **List**
@@ -107,7 +107,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 - **Hold** the Remaining amount or the "Paid" label to peek at the *estimate*, which counts every item regardless of checked state:
   - Estimated monthly expenses = `Σ all expenses − Σ all incomes`
   - Estimated monthly remains = `Monthly income − that`
-- Expenses are grouped by category. A **checked expense moves to a "Paid" section at the end of the list**; "Paid" is only a title of the view, not a category: the expense keeps its own and returns to it when unchecked. Checked incomes stay under Incomes.
+- Expenses are grouped by category. A **checked expense moves to a "Paid" section at the end of the list**; "Paid" is only a title of the view, not a category: the expense keeps its own and returns to it when unchecked. Rows under a category header carry no colour dot; rows under "Paid" do, as it is their only category cue. Checked incomes stay under Incomes.
 - **Tapping a row toggles its check** ("paid / received this month"). Editing and deleting are in the swipe actions and the long-press menu.
 - **Uncheck all** resets every item — the manual start-of-month reset. Nothing resets automatically. It is enabled whenever at least one item is checked.
 - Expenses can have a category: rows are grouped by category, uncategorized last, tinted with the category colour (uncategorized rows turn green when checked). Incomes have no category and are always green.

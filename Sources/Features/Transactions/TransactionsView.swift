@@ -9,15 +9,12 @@ struct TransactionsView: View {
     @Query private var transactions: [Transaction]
     /// Entries of the Expenses view; they adjust the Balance.
     @Query private var extraEntries: [NonFixedExpense]
-    /// Stored categories, used to colour each transaction's dot.
-    @Query private var categories: [ExpenseCategory]
 
     @State private var viewModel = TransactionsViewModel()
 
     var body: some View {
         @Bindable var viewModel = viewModel
         let summary = viewModel.summary(transactions: transactions, extraEntries: extraEntries, accounts: accounts)
-        let categoryColors = Dictionary(categories.map { ($0.name, $0.color) }, uniquingKeysWith: { first, _ in first })
         NavigationStack {
             VStack(spacing: 0) {
                 // Pinned balance card: stays visible even when the list is scrolled.
@@ -36,7 +33,7 @@ struct TransactionsView: View {
                     ForEach(viewModel.dayGroups(transactions)) { group in
                         Section {
                             ForEach(group.transactions) { transaction in
-                                TransactionRow(transaction: transaction, categoryColor: categoryColors[transaction.category])
+                                TransactionRow(transaction: transaction)
                             }
                             .onDelete { offsets in
                                 viewModel.delete(offsets.map { group.transactions[$0] }, context: modelContext)

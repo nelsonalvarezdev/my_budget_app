@@ -55,8 +55,10 @@ struct MonthlyView: View {
                 let paid = viewModel.paidExpenses(items)
                 if !paid.isEmpty {
                     Section {
+                        // Paid rows are no longer under their category, so
+                        // they keep its colour dot.
                         ForEach(paid) { expense in
-                            expenseRow(expense)
+                            expenseRow(expense, showsCategoryDot: true)
                         }
                     } header: {
                         SectionHeader(title: "Paid", trailing: Currency.format(paid.reduce(0) { $0 + $1.amount }))
@@ -102,8 +104,8 @@ struct MonthlyView: View {
     }
 
     /// A fixed-expense row with its category menu, edit and delete actions.
-    private func expenseRow(_ expense: FixedExpense) -> some View {
-        FixedExpenseRow(expense: expense)
+    private func expenseRow(_ expense: FixedExpense, showsCategoryDot: Bool = false) -> some View {
+        FixedExpenseRow(expense: expense, showsCategoryDot: showsCategoryDot)
             .contextMenu {
                 Menu {
                     Button {
@@ -210,6 +212,8 @@ struct MonthlyView: View {
 /// through the swipe actions and the long-press menu.
 struct FixedExpenseRow: View {
     @Bindable var expense: FixedExpense
+    /// Shown only where the row is not already under its category's header.
+    var showsCategoryDot = false
 
     var body: some View {
         Button {
@@ -221,7 +225,7 @@ struct FixedExpenseRow: View {
                     .foregroundStyle(expense.isChecked ? Color.brand : Color.secondary)
                     .font(.title3)
 
-                if !expense.isIncome {
+                if showsCategoryDot {
                     CategoryDot(color: expense.category?.color)
                 }
 

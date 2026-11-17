@@ -2,13 +2,9 @@ import SwiftUI
 
 struct TransactionRow: View {
     let transaction: Transaction
-    /// Colour of the transaction's category, when it matches a stored one.
-    var categoryColor: Color?
 
     var body: some View {
         HStack(spacing: 12) {
-            CategoryDot(color: categoryColor)
-
             VStack(alignment: .leading, spacing: 2) {
                 // Main title: the transaction's name. Falls back to the
                 // category for rows created before the name field existed.

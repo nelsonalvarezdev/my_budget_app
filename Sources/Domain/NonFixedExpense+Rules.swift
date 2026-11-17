@@ -16,10 +16,11 @@ extension NonFixedExpense {
         amount = isBudget ? max(budgetAmount - total, 0) : total
     }
 
-    /// Adds a sub-value (zero is ignored) and updates the total.
-    func addSubValue(_ value: Decimal) {
+    /// Adds a sub-value (zero is ignored) and updates the total. The name is
+    /// optional; surrounding spaces are dropped.
+    func addSubValue(_ value: Decimal, label: String = "") {
         guard value != 0 else { return }
-        subExpenses.append(SubExpense(value: value))
+        subExpenses.append(SubExpense(value: value, label: label.trimmingCharacters(in: .whitespaces)))
         recalculateCumulativeTotal()
     }
 

@@ -10,8 +10,11 @@ struct SubExpensesView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var newValueText = ""
+    @State private var newNameText = ""
     @State private var isConfirmingConversion = false
-    @FocusState private var isNewValueFocused: Bool
+    @FocusState private var newEntryFocus: NewEntryField?
+
+    private enum NewEntryField { case name, value }
 
     var body: some View {
         List {
@@ -55,15 +58,21 @@ struct SubExpensesView: View {
             }
 
             Section {
+                TextField("Name (optional)", text: $newNameText)
+                    .autocorrectionDisabled()
+                    .focused($newEntryFocus, equals: .name)
+                    .submitLabel(.next)
+                    .onSubmit { newEntryFocus = .value }
                 HStack {
                     TextField("New value", text: $newValueText)
                         .keyboardType(.numbersAndPunctuation)
-                        .focused($isNewValueFocused)
+                        .focused($newEntryFocus, equals: .value)
                         .onSubmit { addSubExpense() }
-                        // Tapping outside the field (keyboard dismiss) also
-                        // commits the pending value.
-                        .onChange(of: isNewValueFocused) { _, focused in
-                            if !focused { addSubExpense() }
+                        // Tapping outside both fields (keyboard dismiss)
+                        // also commits the pending value. Moving between
+                        // the name and the value does not.
+                        .onChange(of: newEntryFocus) { _, focus in
+                            if focus == nil { addSubExpense() }
                         }
 
                     Button("Add") { addSubExpense() }
@@ -116,13 +125,14 @@ struct SubExpensesView: View {
 
     private func addSubExpense() {
         guard let newValue else { return }
-        expense.addSubValue(newValue)
+        expense.addSubValue(newValue, label: newNameText)
         newValueText = ""
+        newNameText = ""
     }
 }
 
-/// Editable row for a single sub-expense value: raw digits while editing,
-/// formatted pesos when idle. Calls `onCommit` after each change so the
+/// Editable row for a single sub-expense: its optional name, and its value
+/// as raw digits while editing, formatted pesos when idle. Calls `onCommit` after each change so the
 /// parent expense's total stays in sync.
 struct SubExpenseRow: View {
     @Bindable var subExpense: SubExpense
@@ -133,6 +143,9 @@ struct SubExpenseRow: View {
 
     var body: some View {
         HStack {
+            // Optional name; an unnamed value reads "Spend".
+            TextField("Spend", text: $subExpense.label)
+                .autocorrectionDisabled()
             TextField("0", text: displayBinding)
                 .keyboardType(.numbersAndPunctuation)
                 .multilineTextAlignment(.trailing)

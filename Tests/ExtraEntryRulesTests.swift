@@ -73,6 +73,15 @@ struct ExtraEntryRulesTests {
         #expect(entry.amount == 300)
     }
 
+    @Test func subValuesCanCarryAnOptionalName() {
+        let entry = NonFixedExpense(name: "Trip", amount: 0, isCumulative: true)
+        entry.addSubValue(100, label: " Hotel ")
+        entry.addSubValue(50)
+
+        #expect(entry.subExpenses.map(\.label) == ["Hotel", ""])
+        #expect(entry.amount == 150)
+    }
+
     @Test func zeroSubValuesAreIgnored() throws {
         let context = try makeTestContext()
         let entry = NonFixedExpense(name: "Trip", amount: 0, isCumulative: true)

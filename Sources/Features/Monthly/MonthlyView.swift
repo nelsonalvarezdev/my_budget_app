@@ -55,10 +55,10 @@ struct MonthlyView: View {
                 let paid = viewModel.paidExpenses(items)
                 if !paid.isEmpty {
                     Section {
-                        // Paid rows are no longer under their category, so
-                        // they keep its colour dot.
+                        // Paid rows are no longer under their category's
+                        // header, so they name it in small text.
                         ForEach(paid) { expense in
-                            expenseRow(expense, showsCategoryDot: true)
+                            expenseRow(expense, showsCategoryName: true)
                         }
                     } header: {
                         SectionHeader(title: "Paid", trailing: Currency.format(paid.reduce(0) { $0 + $1.amount }))
@@ -104,8 +104,8 @@ struct MonthlyView: View {
     }
 
     /// A fixed-expense row with its category menu, edit and delete actions.
-    private func expenseRow(_ expense: FixedExpense, showsCategoryDot: Bool = false) -> some View {
-        FixedExpenseRow(expense: expense, showsCategoryDot: showsCategoryDot)
+    private func expenseRow(_ expense: FixedExpense, showsCategoryName: Bool = false) -> some View {
+        FixedExpenseRow(expense: expense, showsCategoryName: showsCategoryName)
             .contextMenu {
                 Menu {
                     Button {
@@ -213,7 +213,7 @@ struct MonthlyView: View {
 struct FixedExpenseRow: View {
     @Bindable var expense: FixedExpense
     /// Shown only where the row is not already under its category's header.
-    var showsCategoryDot = false
+    var showsCategoryName = false
 
     var body: some View {
         Button {
@@ -225,13 +225,16 @@ struct FixedExpenseRow: View {
                     .foregroundStyle(expense.isChecked ? Color.brand : Color.secondary)
                     .font(.title3)
 
-                if showsCategoryDot {
-                    CategoryDot(color: expense.category?.color)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(expense.name)
+                        .strikethrough(expense.isChecked, color: .secondary)
+                        .foregroundStyle(expense.isChecked ? Color.secondary : Color.primary)
+                    if showsCategoryName, let category = expense.category {
+                        Text(category.name)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-
-                Text(expense.name)
-                    .strikethrough(expense.isChecked, color: .secondary)
-                    .foregroundStyle(expense.isChecked ? Color.secondary : Color.primary)
 
                 Spacer()
 

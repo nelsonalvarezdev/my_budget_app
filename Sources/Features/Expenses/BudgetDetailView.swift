@@ -14,7 +14,7 @@ struct BudgetExpenseRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.name)
-                TagPill(text: "of \(Currency.format(expense.budgetAmount))")
+                TagPill(text: "Budget · of \(Currency.format(expense.budgetAmount))")
             }
 
             Spacer()

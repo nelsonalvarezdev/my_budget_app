@@ -87,14 +87,12 @@ struct AddMoreExpenseView: View {
                         }
                     }
 
-                    // Special categories, exclusive to this view. Fixed
-                    // colors; the user cannot pick or change colors here.
+                    // Special categories, exclusive to this view.
                     ForEach(availableSpecials, id: \.name) { special in
                         Button {
                             selectedSpecial = selectedSpecial == special.name ? nil : special.name
                         } label: {
                             HStack {
-                                Image(uiImage: .categoryDot(color: Color(hex: special.colorHex), filled: true))
                                 Text(special.name)
                                 Spacer()
                                 if selectedSpecial == special.name {

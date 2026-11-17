@@ -107,7 +107,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 - **Hold** the Remaining amount or the "Paid" label to peek at the *estimate*, which counts every item regardless of checked state:
   - Estimated monthly expenses = `Σ all expenses − Σ all incomes`
   - Estimated monthly remains = `Monthly income − that`
-- Expenses are grouped by category. A **checked expense moves to a "Paid" section at the end of the list**; "Paid" is only a title of the view, not a category: the expense keeps its own and returns to it when unchecked. Rows under a category header carry no colour dot; rows under "Paid" do, as it is their only category cue. Checked incomes stay under Incomes.
+- Expenses are grouped by category. A **checked expense moves to a "Paid" section at the end of the list**; "Paid" is only a title of the view, not a category: the expense keeps its own and returns to it when unchecked. Rows carry no colour dot: under a category header the header names the category, and under "Paid" the row shows its category name in small text. Checked incomes stay under Incomes.
 - **Tapping a row toggles its check** ("paid / received this month"). Editing and deleting are in the swipe actions and the long-press menu.
 - **Uncheck all** resets every item — the manual start-of-month reset. Nothing resets automatically. It is enabled whenever at least one item is checked.
 - Expenses can have a category: rows are grouped by category, uncategorized last, tinted with the category colour (uncategorized rows turn green when checked). Incomes have no category and are always green.
@@ -128,9 +128,9 @@ Four kinds of entry, chosen at creation (None / Cumulative / Recurring / Budget)
 | Kind | Amount rule | Editing |
 |---|---|---|
 | Plain | Whatever is typed. May be negative: a negative expense acts as a credit. | Name and amount edited in place; trash button |
-| Cumulative (tag: "n values") | `amount = Σ sub-values`. Optional initial sub-value at creation. | Tap opens the sub-value list: add, edit, delete (non-zero values) |
-| Recurring (tag: "base × n") | `amount = base amount × multiplier`. Multiplier starts at 1, minimum 1. | + button adds one; "Remove one" is in the leading swipe and the long-press menu; "Reset to 0" in the long-press menu sets the multiplier (and the amount) to 0; tap opens a modal to edit the base |
-| Budget (tag: "of budget"), expenses only | `amount = max(budget amount − Σ spends, 0)`: what is left, so the Balance only reserves the unspent part. Overspending stops at 0 and shows "Over by". | Tap opens the budget: edit the budget amount, add spends, swipe a spend to delete it, or "Delete all spends" to clear them at once (the budget amount is kept and cannot be deleted) |
+| Cumulative (tag: "Cumulative · n values") | `amount = Σ sub-values`. Optional initial sub-value at creation. | Tap opens the sub-value list: add, edit, delete (non-zero values) |
+| Recurring (tag: "Recurring · base × n") | `amount = base amount × multiplier`. Multiplier starts at 1, minimum 1. | + button adds one; "Remove one" is in the leading swipe and the long-press menu; "Reset to 0" in the long-press menu sets the multiplier (and the amount) to 0; tap opens a modal to edit the base |
+| Budget (tag: "Budget · of budget"), expenses only | `amount = max(budget amount − Σ spends, 0)`: what is left, so the Balance only reserves the unspent part. Overspending stops at 0 and shows "Over by". | Tap opens the budget: edit the budget amount, add spends, swipe a spend to delete it, or "Delete all spends" to clear them at once (the budget amount is kept and cannot be deleted) |
 
 - Expense vs income is fixed at creation; special incomes behave exactly like special expenses.
 - Every change immediately moves the Balance (expenses subtract, incomes add). Cash and Savings are untouched.

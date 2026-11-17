@@ -202,7 +202,7 @@ struct CumulativeExpenseRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.name)
-                TagPill(text: expense.subExpenses.count == 1 ? "1 value" : "\(expense.subExpenses.count) values")
+                TagPill(text: "Cumulative · " + (expense.subExpenses.count == 1 ? "1 value" : "\(expense.subExpenses.count) values"))
             }
 
             Spacer()
@@ -229,7 +229,7 @@ struct RecurringExpenseRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.name)
-                TagPill(text: "\(Currency.format(expense.baseAmount)) × \(expense.multiplier)")
+                TagPill(text: "Recurring · \(Currency.format(expense.baseAmount)) × \(expense.multiplier)")
             }
 
             Spacer()

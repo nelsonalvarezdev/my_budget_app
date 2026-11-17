@@ -108,6 +108,10 @@ final class AddTransactionViewModel {
         if kind == .expense {
             selectedBudget?.addSpend(amount, label: trimmedName)
         }
+        // Save right away instead of waiting for autosave: until the store
+        // is saved, the Transactions list's @Query may not pick up the new
+        // row (it only appeared after relaunching the app).
+        try? context.save()
         return true
     }
 }

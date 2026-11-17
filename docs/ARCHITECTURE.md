@@ -121,17 +121,20 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 
 The headline card shows the **Effect on balance** = `Σ incomes − Σ expenses` of this view. Below it are two sections: **Expenses**, then **Incomes** (shown only when there are incomes). Within each, special entries come first. Each header shows the section total.
 
-Three kinds of entry, chosen at creation (None / Cumulative / Recurring). Only a name is required.
+Four kinds of entry, chosen at creation (None / Cumulative / Recurring / Budget). Only a name is required.
 
 | Kind | Amount rule | Editing |
 |---|---|---|
 | Plain | Whatever is typed. May be negative: a negative expense acts as a credit. | Name and amount edited in place; trash button |
 | Cumulative (tag: "n values") | `amount = Σ sub-values`. Optional initial sub-value at creation. | Tap opens the sub-value list: add, edit, delete (non-zero values) |
 | Recurring (tag: "base × n") | `amount = base amount × multiplier`. Multiplier starts at 1, minimum 1. | + button adds one; "Remove one" is in the leading swipe and the long-press menu; tap opens a modal to edit the base |
+| Budget (tag: "of budget"), expenses only | `amount = max(budget amount − Σ spends, 0)`: what is left, so the Balance only reserves the unspent part. Overspending stops at 0 and shows "Over by". | Tap opens the budget: edit the budget amount, add spends, swipe a spend to delete it (the budget amount cannot be deleted) |
 
 - Expense vs income is fixed at creation; special incomes behave exactly like special expenses.
 - Every change immediately moves the Balance (expenses subtract, incomes add). Cash and Savings are untouched.
 - Deleting an entry also deletes its sub-values.
+- **Budgets and transactions:** an expense transaction can be taken "From budget". It then moves Cash / Savings as usual *and* is recorded as a spend in that budget, so the Balance does not drop twice. Deleting the transaction does not remove the spend (same rule as Cash / Savings); delete the spend from the budget.
+- A Cumulative entry that was used as a budget with negative values offers **Convert to budget**: positive values become the budget amount, negative values become spends.
 
 ### 1.7 Cross-cutting rules
 
@@ -189,7 +192,7 @@ Sources/
     Transactions/ TransactionsView + ViewModel, AddTransactionView + ViewModel,
                   MonthlyReportView, TransactionRow, BalanceHeroCard
     Monthly/      MonthlyView + ViewModel, AddEditFixedExpenseView, CategoryManagerView
-    Expenses/     ExpensesView + ViewModel, AddMoreExpenseView, SubExpensesView
+    Expenses/     ExpensesView + ViewModel, AddMoreExpenseView, SubExpensesView, BudgetDetailView
   Shared/         Theme (accent colour, HeroCard, SectionHeader, CategoryDot, TagPill),
                   CurrencyField, DismissKeyboardOnTap, ColorHelpers
 Tests/            unit tests for Domain, AccountsStore and the view models

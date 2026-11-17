@@ -14,6 +14,10 @@ struct AddTransactionView: View {
     /// views always show the same list.
     @Query private var expenseCategories: [ExpenseCategory]
 
+    /// Entries of the Expenses view; the budgets among them are offered in
+    /// the "From budget" picker.
+    @Query private var extraEntries: [NonFixedExpense]
+
     @State private var viewModel = AddTransactionViewModel()
 
     var body: some View {
@@ -71,6 +75,22 @@ struct AddTransactionView: View {
                     Picker("Paid with", selection: $viewModel.paidWith) {
                         ForEach(PaymentSource.allCases) { source in
                             Text(source.label).tag(source)
+                        }
+                    }
+                }
+
+                let budgets = extraEntries.filter { $0.isBudget && !$0.isIncome }
+                if viewModel.kind == .expense && !budgets.isEmpty {
+                    Section {
+                        Picker("From budget", selection: $viewModel.selectedBudget) {
+                            Text("None").tag(nil as NonFixedExpense?)
+                            ForEach(budgets) { budget in
+                                Text("\(budget.name) · \(Currency.format(budget.amount)) left").tag(Optional(budget))
+                            }
+                        }
+                    } footer: {
+                        if viewModel.selectedBudget != nil {
+                            Text("The amount is also recorded as spent in this budget.")
                         }
                     }
                 }

@@ -10,6 +10,7 @@ struct SubExpensesView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var newValueText = ""
+    @State private var isConfirmingConversion = false
     @FocusState private var isNewValueFocused: Bool
 
     var body: some View {
@@ -74,6 +75,22 @@ struct SubExpensesView: View {
         }
         .navigationTitle(expense.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if expense.canConvertToBudget {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Convert to budget") { isConfirmingConversion = true }
+                }
+            }
+        }
+        .confirmationDialog("Convert to budget?", isPresented: $isConfirmingConversion, titleVisibility: .visible) {
+            Button("Convert") {
+                expense.convertToBudget(in: modelContext)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The positive values become the budget amount and each negative value becomes a spend. What is left stays the same.")
+        }
         .dismissKeyboardOnTap()
         .safeAreaInset(edge: .bottom) {
             Button(role: .destructive) {

@@ -38,6 +38,41 @@ struct AddTransactionViewModelTests {
         #expect(accounts.savings == 5_000)
     }
 
+    @Test func expenseFromABudgetIsRecordedAsASpendInIt() throws {
+        let context = try makeTestContext()
+        let accounts = makeTestAccounts(cash: "10000")
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 5_000)
+        context.insert(budget)
+        let viewModel = AddTransactionViewModel()
+        viewModel.name = "Market"
+        viewModel.amountText = "3000"
+        viewModel.selectedBudget = budget
+
+        viewModel.save(context: context, accounts: accounts)
+
+        #expect(budget.amount == 2_000)
+        #expect(budget.subExpenses.first?.label == "Market")
+        #expect(accounts.cash == 7_000)
+        // Cash dropped and the reserve shrank by the same amount.
+        #expect(BalanceRules.balance(cash: accounts.cash, savings: accounts.savings, extraEntries: [budget]) == 5_000)
+    }
+
+    @Test func incomeIsNeverRecordedInABudget() throws {
+        let context = try makeTestContext()
+        let accounts = makeTestAccounts()
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 5_000)
+        context.insert(budget)
+        let viewModel = AddTransactionViewModel()
+        viewModel.kind = .income
+        viewModel.name = "Gift"
+        viewModel.amountText = "3000"
+        viewModel.selectedBudget = budget
+
+        viewModel.save(context: context, accounts: accounts)
+
+        #expect(budget.amount == 5_000)
+    }
+
     @Test func creditCardExpenseLeavesTheAccountsUntouched() throws {
         let context = try makeTestContext()
         let accounts = makeTestAccounts(cash: "10000", savings: "5000")

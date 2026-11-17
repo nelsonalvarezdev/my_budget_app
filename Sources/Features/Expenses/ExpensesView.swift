@@ -91,12 +91,21 @@ struct ExpensesView: View {
         }
     }
 
-    /// Row for a special-category entry: Cumulative navigates to its
-    /// sub-values; Recurring shows its base × multiplier. Same styling for
+    /// Row for a special-category entry: Budget and Cumulative navigate to
+    /// their values; Recurring shows its base × multiplier. Same styling for
     /// expenses and incomes.
     @ViewBuilder
     private func specialRow(for expense: NonFixedExpense) -> some View {
-        if expense.isCumulative {
+        if expense.isBudget {
+            NavigationLink {
+                BudgetDetailView(expense: expense)
+            } label: {
+                BudgetExpenseRow(expense: expense)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                deleteButton(for: expense)
+            }
+        } else if expense.isCumulative {
             NavigationLink {
                 SubExpensesView(expense: expense)
             } label: {

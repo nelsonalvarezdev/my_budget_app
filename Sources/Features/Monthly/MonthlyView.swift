@@ -156,7 +156,7 @@ struct MonthlyView: View {
                     if !pressing { viewModel.remainingDetails = nil }
                 }
 
-                MonthlyProgressBar(paid: totals.paidFraction, estimated: totals.estimatedFraction)
+                ShareBar(solid: totals.paidFraction, light: totals.estimatedFraction, label: "Paid share of monthly income")
 
                 HStack(spacing: 6) {
                     Text("Paid \(Currency.format(totals.checkedNet))")
@@ -183,31 +183,6 @@ struct MonthlyView: View {
                 .font(.footnote.monospacedDigit())
             }
         }
-    }
-}
-
-/// Share of the monthly income that is paid (solid) and that will be paid
-/// once every item is checked (lighter segment behind it).
-private struct MonthlyProgressBar: View {
-    let paid: Double
-    let estimated: Double
-
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color(.systemBackground).opacity(0.75))
-                Capsule().fill(Color.brand.opacity(0.35))
-                    .frame(width: proxy.size.width * estimated)
-                Capsule().fill(Color.brand)
-                    .frame(width: proxy.size.width * paid)
-            }
-        }
-        .frame(height: 10)
-        .animation(.easeInOut(duration: 0.25), value: paid)
-        .animation(.easeInOut(duration: 0.25), value: estimated)
-        .accessibilityElement()
-        .accessibilityLabel("Paid share of monthly income")
-        .accessibilityValue("\(Int(paid * 100)) percent paid, \(Int(estimated * 100)) percent estimated")
     }
 }
 

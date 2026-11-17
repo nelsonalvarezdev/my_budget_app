@@ -20,6 +20,8 @@ final class AddTransactionViewModel {
     /// Monthly item picked in the "Fixed expense" picker to prefill the
     /// form. The picker lists every Monthly item (expenses and incomes).
     var selectedMonthlyItem: FixedExpense?
+    /// Budget entry (Expenses view) this expense is spent from, if any.
+    var selectedBudget: NonFixedExpense?
 
     /// Category options for the current kind. Expenses use the shared
     /// ExpenseCategory list (same as the Monthly view); incomes keep their
@@ -65,12 +67,17 @@ final class AddTransactionViewModel {
     /// - Cash / Savings move according to `TransactionRules.accountEffect`.
     /// - A Monthly item picked in the form becomes checked ("paid"), even if
     ///   the amount was edited after picking it.
+    /// - An expense taken from a budget is recorded as a spend in it, so the
+    ///   budget's reserve shrinks by the same amount.
     @discardableResult
     func save(context: ModelContext, accounts: AccountsStore) -> Bool {
         guard let amount, amount > 0, !trimmedName.isEmpty else { return false }
         context.insert(Transaction(name: trimmedName, amount: amount, kind: kind, category: category, note: note, date: date, paidWith: paidWith))
         accounts.apply(TransactionRules.accountEffect(amount: amount, kind: kind, paidWith: paidWith))
         selectedMonthlyItem?.isChecked = true
+        if kind == .expense {
+            selectedBudget?.addSpend(amount, label: trimmedName)
+        }
         return true
     }
 }

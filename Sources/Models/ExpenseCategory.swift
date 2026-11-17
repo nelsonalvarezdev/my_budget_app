@@ -54,6 +54,7 @@ final class ExpenseCategory {
     static let specials: [(name: String, colorHex: String)] = [
         ("Cumulative", "#00BCD4"),     // cyan — value is the sum of sub-expenses
         ("Recurring", "#EC407A"),      // pink — amount is base value × multiplier
+        ("Budget", "#0E9F6E"),         // green — amount is what is left of a budget
     ]
 
     /// True if this name matches one of the special categories.

@@ -76,3 +76,30 @@ struct TagPill: View {
             .background(Color(.tertiarySystemFill), in: Capsule())
     }
 }
+
+/// Progress bar for a share between 0 and 1. `solid` is the share reached so
+/// far; `light` is an optional lighter segment behind it (e.g. an estimate).
+struct ShareBar: View {
+    let solid: Double
+    var light: Double = 0
+    var label = "Progress"
+    var tint: Color = .brand
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color(.systemBackground).opacity(0.75))
+                Capsule().fill(tint.opacity(0.35))
+                    .frame(width: proxy.size.width * light)
+                Capsule().fill(tint)
+                    .frame(width: proxy.size.width * solid)
+            }
+        }
+        .frame(height: 10)
+        .animation(.easeInOut(duration: 0.25), value: solid)
+        .animation(.easeInOut(duration: 0.25), value: light)
+        .accessibilityElement()
+        .accessibilityLabel(label)
+        .accessibilityValue("\(Int(solid * 100)) percent")
+    }
+}

@@ -30,6 +30,17 @@ struct AddMoreExpenseView: View {
         selectedSpecial == "Recurring"
     }
 
+    /// True when the Budget special category is selected: the value is the
+    /// amount set aside, spent down afterwards. Expenses only.
+    private var isBudgetSelected: Bool {
+        selectedSpecial == "Budget"
+    }
+
+    /// Budget is only offered for expenses.
+    private var availableSpecials: [(name: String, colorHex: String)] {
+        ExpenseCategory.specials.filter { kind == .expense || $0.name != "Budget" }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -51,12 +62,14 @@ struct AddMoreExpenseView: View {
                         CurrencyField(storedText: $valueText)
                     }
                 } header: {
-                    Text(isCumulativeSelected ? "Initial sub-value" : (kind == .income ? "Incomming" : "Expense"))
+                    Text(isCumulativeSelected ? "Initial sub-value" : (isBudgetSelected ? "Budget amount" : (kind == .income ? "Income" : "Expense")))
                 } footer: {
                     if isCumulativeSelected {
                         Text("Optional. The entry starts with this sub-value; every value you add later adds up to it. Leave it empty to start from $0.")
                     } else if isRecurringSelected {
                         Text("This value is the base amount. It is set once; the total grows with the × multiplier on the row.")
+                    } else if isBudgetSelected {
+                        Text("The amount you set aside. The Balance reserves what is left of it; record what you spend from the entry or from a new transaction.")
                     }
                 }
 
@@ -76,7 +89,7 @@ struct AddMoreExpenseView: View {
 
                     // Special categories, exclusive to this view. Fixed
                     // colors; the user cannot pick or change colors here.
-                    ForEach(ExpenseCategory.specials, id: \.name) { special in
+                    ForEach(availableSpecials, id: \.name) { special in
                         Button {
                             selectedSpecial = selectedSpecial == special.name ? nil : special.name
                         } label: {
@@ -97,6 +110,9 @@ struct AddMoreExpenseView: View {
                         Text("Tap the entry afterwards to add sub-values that add up to its total.")
                     }
                 }
+            }
+            .onChange(of: kind) { _, newKind in
+                if newKind == .income && isBudgetSelected { selectedSpecial = nil }
             }
             .navigationTitle(kind == .income ? "New income" : "New expense")
             .navigationBarTitleDisplayMode(.inline)
@@ -121,7 +137,11 @@ struct AddMoreExpenseView: View {
         // Cumulative: the value is an optional initial sub-value.
         // Recurring: the value is the base amount, set once.
         // Plain: the value is the amount, edited in place afterwards.
-        let mode: ExtraEntryMode = isCumulativeSelected ? .cumulative : (isRecurringSelected ? .recurring : .plain)
+        // Budget: the value is the amount set aside.
+        let mode: ExtraEntryMode = isCumulativeSelected ? .cumulative
+            : isRecurringSelected ? .recurring
+            : isBudgetSelected ? .budget
+            : .plain
         let typedValue = isCumulativeSelected ? initialSubValueText : valueText
         let entry = NonFixedExpense.make(
             name: name,

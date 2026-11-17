@@ -127,8 +127,8 @@ Four kinds of entry, chosen at creation (None / Cumulative / Recurring / Budget)
 |---|---|---|
 | Plain | Whatever is typed. May be negative: a negative expense acts as a credit. | Name and amount edited in place; trash button |
 | Cumulative (tag: "n values") | `amount = Σ sub-values`. Optional initial sub-value at creation. | Tap opens the sub-value list: add, edit, delete (non-zero values) |
-| Recurring (tag: "base × n") | `amount = base amount × multiplier`. Multiplier starts at 1, minimum 1. | + button adds one; "Remove one" is in the leading swipe and the long-press menu; tap opens a modal to edit the base |
-| Budget (tag: "of budget"), expenses only | `amount = max(budget amount − Σ spends, 0)`: what is left, so the Balance only reserves the unspent part. Overspending stops at 0 and shows "Over by". | Tap opens the budget: edit the budget amount, add spends, swipe a spend to delete it (the budget amount cannot be deleted) |
+| Recurring (tag: "base × n") | `amount = base amount × multiplier`. Multiplier starts at 1, minimum 1. | + button adds one; "Remove one" is in the leading swipe and the long-press menu; "Reset to 0" in the long-press menu sets the multiplier (and the amount) to 0; tap opens a modal to edit the base |
+| Budget (tag: "of budget"), expenses only | `amount = max(budget amount − Σ spends, 0)`: what is left, so the Balance only reserves the unspent part. Overspending stops at 0 and shows "Over by". | Tap opens the budget: edit the budget amount, add spends, swipe a spend to delete it, or "Delete all spends" to clear them at once (the budget amount is kept and cannot be deleted) |
 
 - Expense vs income is fixed at creation; special incomes behave exactly like special expenses.
 - Every change immediately moves the Balance (expenses subtract, incomes add). Cash and Savings are untouched.

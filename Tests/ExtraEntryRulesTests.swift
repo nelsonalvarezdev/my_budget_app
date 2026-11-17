@@ -33,6 +33,23 @@ struct ExtraEntryRulesTests {
         #expect(entry.amount == 50)
     }
 
+    @Test func resettingARecurringEntrySetsItToZeroAndItCanCountAgain() {
+        let entry = NonFixedExpense(name: "Gym", amount: 50, isRecurring: true)
+        entry.stepMultiplier(by: 1)
+
+        entry.resetMultiplier()
+        #expect(entry.multiplier == 0)
+        #expect(entry.amount == 0)
+        #expect(entry.baseAmount == 50)
+
+        entry.stepMultiplier(by: -1)
+        #expect(entry.multiplier == 0)
+
+        entry.stepMultiplier(by: 1)
+        #expect(entry.multiplier == 1)
+        #expect(entry.amount == 50)
+    }
+
     @Test func editingTheBaseKeepsTheMultiplier() {
         let entry = NonFixedExpense(name: "Gym", amount: 50, isRecurring: true)
         entry.stepMultiplier(by: 2)
@@ -196,6 +213,23 @@ struct ExtraEntryRulesTests {
 
         #expect(budget.budgetAmount == 1_000)
         #expect(budget.amount == 800)
+    }
+
+    @Test func deletingAllSpendsKeepsTheBudgetAmount() throws {
+        let context = try makeTestContext()
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 1_000)
+        context.insert(budget)
+        budget.addSpend(300)
+        budget.addSpend(900)
+        try context.save()
+
+        budget.removeAllSpends(in: context)
+        try context.save()
+
+        #expect(budget.subExpenses.isEmpty)
+        #expect(budget.budgetAmount == 1_000)
+        #expect(budget.amount == 1_000)
+        #expect(try context.fetch(FetchDescriptor<SubExpense>()).isEmpty)
     }
 
     @Test func convertingANegativeValuesEntryKeepsWhatIsLeft() throws {

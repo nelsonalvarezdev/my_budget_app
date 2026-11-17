@@ -262,6 +262,12 @@ struct RecurringExpenseRow: View {
             removeOneButton
                 .disabled(expense.multiplier <= 1)
             Button {
+                expense.resetMultiplier()
+            } label: {
+                Label("Reset to 0", systemImage: "arrow.counterclockwise")
+            }
+            .disabled(expense.multiplier == 0)
+            Button {
                 isShowingBaseEditor = true
             } label: {
                 Label("Edit base amount…", systemImage: "pencil")

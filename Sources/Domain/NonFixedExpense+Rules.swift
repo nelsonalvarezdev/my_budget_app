@@ -57,6 +57,13 @@ extension NonFixedExpense {
         recalculateCumulativeTotal()
     }
 
+    /// Deletes every spend at once; the budget amount is kept, so the whole
+    /// budget is available again.
+    func removeAllSpends(in context: ModelContext) {
+        guard isBudget else { return }
+        removeSubValues(subExpenses, in: context)
+    }
+
     /// True for a cumulative entry used as a budget the old way: positive
     /// values set aside and negative values spent.
     var canConvertToBudget: Bool {
@@ -87,6 +94,13 @@ extension NonFixedExpense {
         guard updated >= 1 else { return }
         multiplier = updated
         amount = baseAmount * Decimal(multiplier)
+    }
+
+    /// Starts the count over: the multiplier goes to 0, so the amount is 0
+    /// until "Add one" is used again. The base amount is kept.
+    func resetMultiplier() {
+        multiplier = 0
+        amount = 0
     }
 
     func setBaseAmount(_ base: Decimal) {

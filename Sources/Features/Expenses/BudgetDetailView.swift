@@ -6,6 +6,9 @@ import SwiftData
 /// `BudgetDetailView` (handled by the parent's NavigationLink).
 struct BudgetExpenseRow: View {
     @Bindable var expense: NonFixedExpense
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var isConfirmingClear = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -30,6 +33,44 @@ struct BudgetExpenseRow: View {
                 }
             }
         }
+        .contextMenu {
+            Button(role: .destructive) {
+                isConfirmingClear = true
+            } label: {
+                Label("Delete all spends", systemImage: "arrow.counterclockwise")
+            }
+            .disabled(expense.subExpenses.isEmpty)
+            Button(role: .destructive) {
+                expense.delete(from: modelContext)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .deleteAllSpendsConfirmation(isPresented: $isConfirmingClear, expense: expense)
+    }
+}
+
+extension View {
+    /// Asks before deleting every spend of a budget. The budget amount stays.
+    func deleteAllSpendsConfirmation(isPresented: Binding<Bool>, expense: NonFixedExpense) -> some View {
+        modifier(DeleteAllSpendsConfirmation(isPresented: isPresented, expense: expense))
+    }
+}
+
+private struct DeleteAllSpendsConfirmation: ViewModifier {
+    @Binding var isPresented: Bool
+    let expense: NonFixedExpense
+    @Environment(\.modelContext) private var modelContext
+
+    func body(content: Content) -> some View {
+        content.alert("Delete all spends?", isPresented: $isPresented) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete all", role: .destructive) {
+                expense.removeAllSpends(in: modelContext)
+            }
+        } message: {
+            Text("The budget amount of \(Currency.format(expense.budgetAmount)) is kept, and all of it becomes available again.")
+        }
     }
 }
 
@@ -42,6 +83,7 @@ struct BudgetDetailView: View {
 
     @State private var budgetText = ""
     @State private var newSpendText = ""
+    @State private var isConfirmingClear = false
     @FocusState private var isNewSpendFocused: Bool
 
     var body: some View {
@@ -119,6 +161,16 @@ struct BudgetDetailView: View {
                 }
             }
 
+            if !expense.subExpenses.isEmpty {
+                Section {
+                    Button(role: .destructive) {
+                        isConfirmingClear = true
+                    } label: {
+                        Label("Delete all spends", systemImage: "arrow.counterclockwise")
+                    }
+                }
+            }
+
             Section {
                 HStack {
                     TextField("New spend", text: $newSpendText)
@@ -135,6 +187,7 @@ struct BudgetDetailView: View {
         .navigationTitle(expense.name)
         .navigationBarTitleDisplayMode(.inline)
         .dismissKeyboardOnTap()
+        .deleteAllSpendsConfirmation(isPresented: $isConfirmingClear, expense: expense)
         .onAppear { budgetText = Currency.formatForEditing(expense.budgetAmount) }
     }
 

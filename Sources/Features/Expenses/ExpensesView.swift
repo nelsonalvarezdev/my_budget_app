@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 
 /// Tab for registering extra (non-fixed) expenses and incomes. The list
-/// shows expenses first, then Incomming items below. Each row is editable in
+/// opens with the entries' net effect on the Balance, then shows expenses
+/// and incomes. Each row is editable in
 /// place (Expense / Amount columns) and has a delete button. Expenses
 /// discount from the balance; incomes are added to it.
 struct ExpensesView: View {
@@ -46,6 +47,22 @@ struct ExpensesView: View {
     private func entryList(_ sections: ExtraEntrySections) -> some View {
         List {
             Section {
+                HeroCard {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Effect on balance")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        HeroAmount(amount: Currency.formatSigned(sections.netEffect))
+                        Text("Expenses \(Currency.format(sections.expensesTotal)) · Incomes \(Currency.format(sections.incomesTotal))")
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
+
+            Section {
                 // Special-category expenses first (Cumulative, Recurring).
                 ForEach(sections.specialExpenses) { expense in
                     specialRow(for: expense)
@@ -54,19 +71,11 @@ struct ExpensesView: View {
                     NonFixedExpenseRow(expense: expense)
                 }
             } header: {
-                HStack {
-                    Text("Expense")
-                    Spacer()
-                    Text("Amount")
-                }
-                .font(.subheadline.weight(.semibold))
-                .textCase(nil)
-            } footer: {
-                Text("Total: \(Currency.format(sections.expensesTotal)). Positive amounts reduce the Balance; negative amounts are credits that increase it.")
+                SectionHeader(title: "Expenses", trailing: Currency.format(sections.expensesTotal))
             }
 
-            // Incomming items, listed after the expenses. Special-category
-            // incomes behave exactly like their expense counterparts.
+            // Incomes, listed after the expenses. Special-category incomes
+            // behave exactly like their expense counterparts.
             if sections.hasIncomes {
                 Section {
                     ForEach(sections.specialIncomes) { income in
@@ -76,23 +85,15 @@ struct ExpensesView: View {
                         NonFixedExpenseRow(expense: income)
                     }
                 } header: {
-                    HStack {
-                        Text("Incomming")
-                        Spacer()
-                        Text("Amount")
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .textCase(nil)
-                } footer: {
-                    Text("Total: \(Currency.format(sections.incomesTotal)). These amounts are added to the Balance on the Transactions view.")
+                    SectionHeader(title: "Incomes", trailing: Currency.format(sections.incomesTotal))
                 }
             }
         }
     }
 
     /// Row for a special-category entry: Cumulative navigates to its
-    /// sub-values; Recurring shows the × multiplier stepper. Same styling
-    /// for expenses and incomes.
+    /// sub-values; Recurring shows its base × multiplier. Same styling for
+    /// expenses and incomes.
     @ViewBuilder
     private func specialRow(for expense: NonFixedExpense) -> some View {
         if expense.isCumulative {
@@ -104,13 +105,11 @@ struct ExpensesView: View {
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 deleteButton(for: expense)
             }
-            .listRowBackground(Color(hex: "00BCD4").opacity(0.25))
         } else {
             RecurringExpenseRow(expense: expense)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     deleteButton(for: expense)
                 }
-                .listRowBackground(Color(hex: "EC407A").opacity(0.25))
         }
     }
 
@@ -184,75 +183,108 @@ struct NonFixedExpenseRow: View {
 
 // MARK: - Cumulative row
 
-/// Read-only row for a cumulative expense: shows the special category color
-/// and the running total of its sub-expenses. Tapping navigates to
-/// `SubExpensesView` (handled by the parent's NavigationLink).
+/// Read-only row for a cumulative entry: its name, how many sub-values it
+/// has and their running total. Tapping navigates to `SubExpensesView`
+/// (handled by the parent's NavigationLink).
 struct CumulativeExpenseRow: View {
     @Bindable var expense: NonFixedExpense
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(expense.name)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(expense.name)
+                TagPill(text: expense.subExpenses.count == 1 ? "1 value" : "\(expense.subExpenses.count) values")
+            }
 
             Spacer()
 
-            Text(Currency.format(expense.amount))
-                .font(.body.monospacedDigit())
-                .frame(width: 140)
+            EntryAmount(expense: expense)
         }
     }
 }
 
 // MARK: - Recurring row
 
-/// Row for a recurring expense: shows the special category color, a
-/// −/multiplier/+ stepper (starts at 1) and the amount, which is always
-/// baseAmount × multiplier. Tapping the row opens a modal to edit the base
-/// amount (the only editable value; the multiplied amount is derived).
+/// Row for a recurring entry: its name, a "base × multiplier" tag and the
+/// amount, which is always baseAmount × multiplier. The + button adds one to
+/// the multiplier; lowering it is in the leading swipe and the long-press
+/// menu. Tapping the row opens a modal to edit the base amount (the only
+/// editable value; the multiplied amount is derived).
 struct RecurringExpenseRow: View {
     @Bindable var expense: NonFixedExpense
+    @Environment(\.modelContext) private var modelContext
 
     @State private var isShowingBaseEditor = false
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(expense.name)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(expense.name)
+                TagPill(text: "\(Currency.format(expense.baseAmount)) × \(expense.multiplier)")
+            }
 
             Spacer()
 
-            // − / multiplier / + stepper. The multiplier starts at 1 and the
-            // Amount always reflects base × multiplier.
-            HStack(spacing: 10) {
-                Button {
-                    expense.stepMultiplier(by: -1)
-                } label: {
-                    Image(systemName: "minus.circle")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.borderless)
-                .disabled(expense.multiplier <= 1)
+            EntryAmount(expense: expense)
 
-                Text("\(expense.multiplier)")
-                    .font(.body.monospacedDigit())
-                    .frame(minWidth: 24)
-
-                Button {
-                    expense.stepMultiplier(by: 1)
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.borderless)
+            Button {
+                expense.stepMultiplier(by: 1)
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
             }
-
-            Text(Currency.format(expense.amount))
-                .font(.body.monospacedDigit())
-                .frame(width: 140)
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Add one")
         }
         .contentShape(Rectangle())
         .onTapGesture { isShowingBaseEditor = true }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            if expense.multiplier > 1 {
+                removeOneButton
+                    .tint(.orange)
+            }
+        }
+        .contextMenu {
+            Button {
+                expense.stepMultiplier(by: 1)
+            } label: {
+                Label("Add one", systemImage: "plus")
+            }
+            removeOneButton
+                .disabled(expense.multiplier <= 1)
+            Button {
+                isShowingBaseEditor = true
+            } label: {
+                Label("Edit base amount…", systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                expense.delete(from: modelContext)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
         .sheet(isPresented: $isShowingBaseEditor) {
             EditRecurringBaseView(expense: expense)
         }
+    }
+
+    private var removeOneButton: some View {
+        Button {
+            expense.stepMultiplier(by: -1)
+        } label: {
+            Label("Remove one", systemImage: "minus")
+        }
+    }
+}
+
+/// Amount of a special entry: incomes are shown signed, in the accent colour.
+private struct EntryAmount: View {
+    let expense: NonFixedExpense
+
+    var body: some View {
+        Text(expense.isIncome ? Currency.formatSigned(expense.amount) : Currency.format(expense.amount))
+            .font(.body.monospacedDigit())
+            .foregroundStyle(expense.isIncome ? Color.brand : Color.primary)
     }
 }
 

@@ -8,6 +8,12 @@ struct CurrencyTests {
         #expect(Currency.format(0) == "$ 0")
     }
 
+    @Test func signedFormatPutsTheSignBeforeTheSymbol() {
+        #expect(Currency.formatSigned(250_000) == "+ $ 250.000")
+        #expect(Currency.formatSigned(-64_000) == "− $ 64.000")
+        #expect(Currency.formatSigned(0) == "$ 0")
+    }
+
     @Test func editingFormatIsPlainDigitsAndEmptyForZero() {
         #expect(Currency.formatForEditing(1_500_000) == "1500000")
         #expect(Currency.formatForEditing(0) == "")

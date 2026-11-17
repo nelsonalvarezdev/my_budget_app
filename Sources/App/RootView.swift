@@ -82,7 +82,7 @@ struct RootView: View {
                             .font(.caption2)
                     }
                     .frame(maxWidth: .infinity)
-                    .foregroundStyle(index == selectedView ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(index == selectedView ? Color.brand : Color.secondary)
                 }
                 .buttonStyle(.plain)
             }

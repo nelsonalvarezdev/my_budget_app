@@ -43,6 +43,9 @@ struct ExtraEntrySections {
     /// Added to the Balance.
     let incomesTotal: Decimal
 
+    /// What the entries do to the Balance: incomes − expenses.
+    var netEffect: Decimal { incomesTotal - expensesTotal }
+
     var hasIncomes: Bool { !specialIncomes.isEmpty || !plainIncomes.isEmpty }
 
     init(entries: [NonFixedExpense]) {

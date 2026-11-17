@@ -16,6 +16,13 @@ enum Currency {
         return "$ \(number)"
     }
 
+    /// Formats an amount with an explicit sign in front, e.g. "+ $ 250.000"
+    /// or "− $ 64.000". Zero has no sign.
+    static func formatSigned(_ amount: Decimal) -> String {
+        if amount == 0 { return format(0) }
+        return amount < 0 ? "− \(format(-amount))" : "+ \(format(amount))"
+    }
+
     /// Formats an amount divided by 1000 to shorten it, e.g. "$ 1.710" for
     /// 1.710.000 — used for compact parenthesized summations.
     static func formatInThousands(_ amount: Decimal) -> String {

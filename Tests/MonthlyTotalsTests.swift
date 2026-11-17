@@ -30,6 +30,28 @@ struct MonthlyTotalsTests {
         #expect(totals.remaining == 5_000)
     }
 
+    @Test func barFractionsAreSharesOfTheMonthlyIncome() {
+        let items = [
+            FixedExpense(name: "Rent", amount: 1_000, isChecked: true),
+            FixedExpense(name: "Phone", amount: 1_500),
+        ]
+        let totals = MonthlyTotals(items: items, monthlyIncome: 5_000)
+        #expect(totals.paidFraction == 0.2)
+        #expect(totals.estimatedFraction == 0.5)
+    }
+
+    @Test func barFractionsStayBetweenZeroAndOne() {
+        let overspent = MonthlyTotals(items: [FixedExpense(name: "Rent", amount: 9_000, isChecked: true)], monthlyIncome: 5_000)
+        #expect(overspent.paidFraction == 1)
+
+        let netIncome = MonthlyTotals(items: [FixedExpense(name: "Bonus", amount: 100, isChecked: true, isIncome: true)], monthlyIncome: 5_000)
+        #expect(netIncome.paidFraction == 0)
+
+        let noIncome = MonthlyTotals(items: [FixedExpense(name: "Rent", amount: 100, isChecked: true)], monthlyIncome: 0)
+        #expect(noIncome.paidFraction == 0)
+        #expect(noIncome.estimatedFraction == 0)
+    }
+
     @Test func remainingCanGoNegative() {
         let totals = MonthlyTotals(items: [FixedExpense(name: "Rent", amount: 1_000, isChecked: true)], monthlyIncome: 400)
         #expect(totals.remaining == -600)

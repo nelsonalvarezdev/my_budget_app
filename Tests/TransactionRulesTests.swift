@@ -69,6 +69,15 @@ struct TransactionRulesTests {
         #expect(groups[1].transactions[1] === morning)
     }
 
+    @Test func dayNetIsIncomeMinusExpenses() {
+        let day = date(2026, 11, 5)
+        let groups = TransactionRules.dayGroups([
+            Transaction(amount: 250, kind: .income, category: "A", date: day),
+            Transaction(amount: 120, kind: .expense, category: "A", date: day),
+        ])
+        #expect(groups[0].net == 130)
+    }
+
     @Test func categoryTotalsAreSortedLargestFirstPerKind() {
         let transactions = [
             Transaction(amount: 10, kind: .expense, category: "Food"),

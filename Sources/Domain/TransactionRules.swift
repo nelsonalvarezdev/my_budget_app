@@ -24,6 +24,12 @@ struct DayGroup: Identifiable {
     let transactions: [Transaction]
 
     var id: Date { day }
+
+    /// Income − expenses of the day.
+    var net: Decimal {
+        let totals = TransactionRules.totals(transactions)
+        return totals.income - totals.expenses
+    }
 }
 
 /// Total of one category, for the monthly report.

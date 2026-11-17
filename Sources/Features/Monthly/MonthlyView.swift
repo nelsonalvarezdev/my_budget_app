@@ -18,57 +18,15 @@ struct MonthlyView: View {
         NavigationStack {
             List {
                 Section {
-                    HStack {
-                        Text("Monthly income")
-                        Spacer()
-                        CurrencyField(storedText: Bindable(accounts).monthlyIncomeText)
-                            .font(.title3.monospacedDigit())
-                            .frame(width: 160)
-                    }
-
-                    HStack {
-                        Text("Monthly expenses")
-                        Spacer()
-                        Text(Currency.format(totals.checkedNet))
-                            .font(.title3.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    .popover(item: $viewModel.expensesDetails) { details in
-                        EstimatedDetailsPopover(details: details)
-                    }
-                    .onLongPressGesture(minimumDuration: 0.4) {
-                        viewModel.showEstimatedExpenses(totals)
-                    } onPressingChanged: { pressing in
-                        if !pressing { viewModel.expensesDetails = nil }
-                    }
-
-                    HStack {
-                        Text("Remaining")
-                            .font(.headline)
-                        Spacer()
-                        Text(Currency.format(totals.remaining))
-                            .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(totals.remaining >= 0 ? Color.green : Color.red)
-                    }
-                    .popover(item: $viewModel.remainingDetails) { details in
-                        EstimatedDetailsPopover(details: details)
-                    }
-                    .onLongPressGesture(minimumDuration: 0.4) {
-                        viewModel.showEstimatedRemaining(totals)
-                    } onPressingChanged: { pressing in
-                        if !pressing { viewModel.remainingDetails = nil }
-                    }
-                } header: {
-                    Text("Income")
-                } footer: {
-                    Text("Set your monthly income here (in pesos). Checked rows below are subtracted from it: \(Currency.format(totals.checkedNet)).")
+                    heroCard(totals)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                 }
 
-                Section {
-                    ForEach(viewModel.groupedExpenses(items)) { group in
+                ForEach(viewModel.groupedExpenses(items)) { group in
+                    Section {
                         ForEach(group.expenses) { expense in
                             FixedExpenseRow(expense: expense)
-                                .listRowBackground(rowBackground(for: expense))
                                 .contextMenu {
                                     Menu {
                                         Button {
@@ -100,24 +58,26 @@ struct MonthlyView: View {
                                     editAndDeleteButtons(for: expense, editTitle: "Edit")
                                 }
                         }
+                    } header: {
+                        SectionHeader(title: group.title, trailing: "\(group.checkedCount) of \(group.expenses.count) paid")
                     }
-                } header: {
-                    Text("Monthly expenses")
                 }
 
-                Section {
-                    ForEach(viewModel.incomes(items)) { income in
-                        FixedExpenseRow(expense: income)
-                            .listRowBackground(Color.green.opacity(0.15))
-                            .contextMenu {
-                                editAndDeleteButtons(for: income, editTitle: "Edit…")
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                editAndDeleteButtons(for: income, editTitle: "Edit")
-                            }
+                let incomes = viewModel.incomes(items)
+                if !incomes.isEmpty {
+                    Section {
+                        ForEach(incomes) { income in
+                            FixedExpenseRow(expense: income)
+                                .contextMenu {
+                                    editAndDeleteButtons(for: income, editTitle: "Edit…")
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    editAndDeleteButtons(for: income, editTitle: "Edit")
+                                }
+                        }
+                    } header: {
+                        SectionHeader(title: "Incomes", trailing: "\(incomes.filter(\.isChecked).count) of \(incomes.count) received")
                     }
-                } header: {
-                    Text("Incomes")
                 }
             }
             .navigationTitle("Monthly")
@@ -170,12 +130,84 @@ struct MonthlyView: View {
         }
     }
 
-    /// Assigned category color takes precedence; unchecked uncategorized rows
-    /// stay clear, and checked uncategorized rows keep the green "paid" tint.
-    private func rowBackground(for expense: FixedExpense) -> Color {
-        if let color = expense.category?.color { return color.opacity(0.22) }
-        if expense.isChecked { return Color.green.opacity(0.18) }
-        return Color.clear
+    /// Headline card: what is left of the monthly income, a bar showing how
+    /// much of it is paid (solid) and will be paid once everything is checked
+    /// (lighter), and the editable monthly income. Holding the remaining
+    /// amount or the paid label peeks at the estimated figures.
+    private func heroCard(_ totals: MonthlyTotals) -> some View {
+        @Bindable var viewModel = viewModel
+        @Bindable var accounts = accounts
+        return HeroCard {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Remaining this month")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    HeroAmount(amount: Currency.format(totals.remaining), isNegative: totals.remaining < 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .popover(item: $viewModel.remainingDetails) { details in
+                    EstimatedDetailsPopover(details: details)
+                }
+                .onLongPressGesture(minimumDuration: 0.4) {
+                    viewModel.showEstimatedRemaining(totals)
+                } onPressingChanged: { pressing in
+                    if !pressing { viewModel.remainingDetails = nil }
+                }
+
+                MonthlyProgressBar(paid: totals.paidFraction, estimated: totals.estimatedFraction)
+
+                HStack(spacing: 6) {
+                    Text("Paid \(Currency.format(totals.checkedNet))")
+                        .contentShape(Rectangle())
+                        .popover(item: $viewModel.expensesDetails) { details in
+                            EstimatedDetailsPopover(details: details)
+                        }
+                        .onLongPressGesture(minimumDuration: 0.4) {
+                            viewModel.showEstimatedExpenses(totals)
+                        } onPressingChanged: { pressing in
+                            if !pressing { viewModel.expensesDetails = nil }
+                        }
+                    Spacer()
+                    Text("of")
+                        .foregroundStyle(.secondary)
+                    CurrencyField(storedText: $accounts.monthlyIncomeText)
+                        .fixedSize()
+                        .accessibilityLabel("Monthly income")
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+                .font(.footnote.monospacedDigit())
+            }
+        }
+    }
+}
+
+/// Share of the monthly income that is paid (solid) and that will be paid
+/// once every item is checked (lighter segment behind it).
+private struct MonthlyProgressBar: View {
+    let paid: Double
+    let estimated: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color(.systemBackground).opacity(0.75))
+                Capsule().fill(Color.brand.opacity(0.35))
+                    .frame(width: proxy.size.width * estimated)
+                Capsule().fill(Color.brand)
+                    .frame(width: proxy.size.width * paid)
+            }
+        }
+        .frame(height: 10)
+        .animation(.easeInOut(duration: 0.25), value: paid)
+        .animation(.easeInOut(duration: 0.25), value: estimated)
+        .accessibilityElement()
+        .accessibilityLabel("Paid share of monthly income")
+        .accessibilityValue("\(Int(paid * 100)) percent paid, \(Int(estimated * 100)) percent estimated")
     }
 }
 
@@ -192,23 +224,31 @@ struct FixedExpenseRow: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: expense.isChecked ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(expense.isChecked ? Color.green : Color.secondary)
+                    .foregroundStyle(expense.isChecked ? Color.brand : Color.secondary)
                     .font(.title3)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(expense.name)
-                        .font(.body)
-                        .strikethrough(expense.isChecked, color: .secondary)
-                    Text(Currency.format(expense.amount))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                if !expense.isIncome {
+                    CategoryDot(color: expense.category?.color)
                 }
 
+                Text(expense.name)
+                    .strikethrough(expense.isChecked, color: .secondary)
+                    .foregroundStyle(expense.isChecked ? Color.secondary : Color.primary)
+
                 Spacer()
+
+                Text(expense.isIncome ? Currency.formatSigned(expense.amount) : Currency.format(expense.amount))
+                    .font(.body.monospacedDigit())
+                    .foregroundStyle(amountColor)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private var amountColor: Color {
+        if expense.isChecked { return .secondary }
+        return expense.isIncome ? .brand : .primary
     }
 }
 

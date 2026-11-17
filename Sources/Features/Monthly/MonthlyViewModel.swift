@@ -8,6 +8,9 @@ struct MonthlyCategoryGroup: Identifiable {
     var expenses: [FixedExpense]
 
     var id: String { key }
+
+    var title: String { key.isEmpty ? "No category" : key }
+    var checkedCount: Int { expenses.filter(\.isChecked).count }
 }
 
 /// Estimated figure shown when the user holds tap on a summary row.

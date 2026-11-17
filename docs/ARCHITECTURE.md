@@ -54,15 +54,17 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 
 ### 1.4 Transactions view
 
-**Summary card (pinned)**
+**Balance card (pinned)**
 
 - **Balance** = `Cash + Savings − Σ extra expenses + Σ extra incomes`. It is **global by design**: the same figure whatever month is displayed. Red when negative.
-- **Income / Expenses pills** = sums of the displayed month's transactions. Informational only; they do not feed the Balance.
+- **Cash** and **Savings** are two editable tiles inside the card; the value is committed when editing ends (blur or Enter).
+- **Available to spend** = Cash + Savings, shown under the tiles.
 
-**Balance distribution**
+**List**
 
-- Cash and Savings are editable; the value is committed when editing ends (blur or Enter).
-- **Available to spend** = Cash + Savings.
+- **Income / Spent** = sums of the displayed month's transactions. Informational only; they do not feed the Balance.
+- Each day's header shows the day's net (income − expenses). Each row has a dot in its category's colour.
+- New transactions are added with the floating + button.
 
 **List**
 
@@ -96,11 +98,12 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 
 ### 1.5 Monthly view
 
-- **Monthly income** — manually entered.
+- **Monthly income** — manually entered, in the headline card ("of $ …").
 - Items are fixed **expenses** or fixed **incomes**. The type is chosen when adding and cannot be changed afterwards.
 - **Monthly expenses** = `Σ checked expenses − Σ checked incomes`.
-- **Remaining** = `Monthly income − Monthly expenses`. Green when ≥ 0, red otherwise.
-- **Hold** either row to peek at the *estimate*, which counts every item regardless of checked state:
+- **Remaining** = `Monthly income − Monthly expenses`. The card's headline; red when negative.
+- The **bar** shows Monthly expenses as a share of the income (solid) and, behind it, the estimated share once every item is checked (lighter). Both are clamped to 0–100 %.
+- **Hold** the Remaining amount or the "Paid" label to peek at the *estimate*, which counts every item regardless of checked state:
   - Estimated monthly expenses = `Σ all expenses − Σ all incomes`
   - Estimated monthly remains = `Monthly income − that`
 - **Tapping a row toggles its check** ("paid / received this month"). Editing and deleting are in the swipe actions and the long-press menu.
@@ -116,15 +119,15 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 
 ### 1.6 Expenses view ("More expenses")
 
-Two sections: **Expense**, then **Incomming** (shown only when there are incomes). Within each, special entries come first. Each footer shows the section total.
+The headline card shows the **Effect on balance** = `Σ incomes − Σ expenses` of this view. Below it are two sections: **Expenses**, then **Incomes** (shown only when there are incomes). Within each, special entries come first. Each header shows the section total.
 
 Three kinds of entry, chosen at creation (None / Cumulative / Recurring). Only a name is required.
 
 | Kind | Amount rule | Editing |
 |---|---|---|
 | Plain | Whatever is typed. May be negative: a negative expense acts as a credit. | Name and amount edited in place; trash button |
-| Cumulative (cyan) | `amount = Σ sub-values`. Optional initial sub-value at creation. | Tap opens the sub-value list: add, edit, delete (non-zero values) |
-| Recurring (pink) | `amount = base amount × multiplier`. Multiplier starts at 1, minimum 1. | − / + stepper on the row; tap opens a modal to edit the base |
+| Cumulative (tag: "n values") | `amount = Σ sub-values`. Optional initial sub-value at creation. | Tap opens the sub-value list: add, edit, delete (non-zero values) |
+| Recurring (tag: "base × n") | `amount = base amount × multiplier`. Multiplier starts at 1, minimum 1. | + button adds one; "Remove one" is in the leading swipe and the long-press menu; tap opens a modal to edit the base |
 
 - Expense vs income is fixed at creation; special incomes behave exactly like special expenses.
 - Every change immediately moves the Balance (expenses subtract, incomes add). Cash and Savings are untouched.
@@ -183,10 +186,11 @@ Sources/
   Data/           AccountsStore, BackupService, BackupFile
   Features/
     Transactions/ TransactionsView + ViewModel, AddTransactionView + ViewModel,
-                  MonthlyReportView, TransactionRow, SummaryCard, BalanceDistributionSection
+                  MonthlyReportView, TransactionRow, BalanceHeroCard
     Monthly/      MonthlyView + ViewModel, AddEditFixedExpenseView, CategoryManagerView
     Expenses/     ExpensesView + ViewModel, AddMoreExpenseView, SubExpensesView
-  Shared/         CurrencyField, DismissKeyboardOnTap, ColorHelpers
+  Shared/         Theme (accent colour, HeroCard, SectionHeader, CategoryDot, TagPill),
+                  CurrencyField, DismissKeyboardOnTap, ColorHelpers
 Tests/            unit tests for Domain, AccountsStore and the view models
 ```
 
@@ -209,8 +213,9 @@ Tests/            unit tests for Domain, AccountsStore and the view models
 ### 2.4 Conventions
 
 - A new formula goes in `Domain/` with a test, never in a view.
+- One accent colour (`Color.brand`, the icon's green) for money in and things done; red for money out. Each tab opens with a `HeroCard`; totals go in section headers, not footers.
 - Only `AccountsStore` reads or writes the three settings keys.
-- A screen gets a view model when it has state or logic worth testing. Small forms and reusable rows (`AddEditFixedExpenseView`, `CategoryManagerView`, `CurrencyField`, `SummaryCard`) stay plain views.
+- A screen gets a view model when it has state or logic worth testing. Small forms and reusable rows (`AddEditFixedExpenseView`, `CategoryManagerView`, `CurrencyField`, `BalanceHeroCard`) stay plain views.
 - View models are `@MainActor @Observable`, owned by their view with `@State`, and receive `ModelContext` / `AccountsStore` as method arguments.
 - Deliberately not used: repository protocols, use-case classes, a DI container, coordinators, TCA, extra modules. Revisit only if the app gains sync, multiple accounts or a second platform.
 

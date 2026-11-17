@@ -151,6 +151,14 @@ struct ExtraEntryRulesTests {
         #expect(sections.hasIncomes)
     }
 
+    @Test func netEffectIsIncomesMinusExpenses() {
+        let sections = ExtraEntrySections(entries: [
+            NonFixedExpense(name: "Trip", amount: 300),
+            NonFixedExpense(name: "Gift", amount: 100, isIncome: true),
+        ])
+        #expect(sections.netEffect == -200)
+    }
+
     @Test func incomeSectionIsHiddenWithoutIncomes() {
         let sections = ExtraEntrySections(entries: [NonFixedExpense(name: "Taxi", amount: 10)])
         #expect(!sections.hasIncomes)

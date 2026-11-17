@@ -9,32 +9,61 @@ struct TransactionsView: View {
     @Query private var transactions: [Transaction]
     /// Entries of the Expenses view; they adjust the Balance.
     @Query private var extraEntries: [NonFixedExpense]
+    /// Stored categories, used to colour each transaction's dot.
+    @Query private var categories: [ExpenseCategory]
 
     @State private var viewModel = TransactionsViewModel()
 
     var body: some View {
         @Bindable var viewModel = viewModel
+        let summary = viewModel.summary(transactions: transactions, extraEntries: extraEntries, accounts: accounts)
+        let categoryColors = Dictionary(categories.map { ($0.name, $0.color) }, uniquingKeysWith: { first, _ in first })
         NavigationStack {
             VStack(spacing: 0) {
                 // Pinned balance card: stays visible even when the list is scrolled.
-                SummaryCard(summary: viewModel.summary(transactions: transactions, extraEntries: extraEntries, accounts: accounts))
+                BalanceHeroCard(balance: summary.balance)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
                     .background(Color(.systemGroupedBackground))
 
                 List {
-                    BalanceDistributionSection()
+                    Section {
+                        MonthStatsRow(income: summary.income, expenses: summary.expenses)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                    }
 
                     ForEach(viewModel.dayGroups(transactions)) { group in
-                        Section(group.dayLabel) {
+                        Section {
                             ForEach(group.transactions) { transaction in
-                                TransactionRow(transaction: transaction)
+                                TransactionRow(transaction: transaction, categoryColor: categoryColors[transaction.category])
                             }
                             .onDelete { offsets in
                                 viewModel.delete(offsets.map { group.transactions[$0] }, context: modelContext)
                             }
+                        } header: {
+                            SectionHeader(title: group.dayLabel, trailing: Currency.formatSigned(group.net))
                         }
                     }
                 }
                 .listStyle(.insetGrouped)
+                // Room for the floating add button below the last row.
+                .contentMargins(.bottom, 88, for: .scrollContent)
+                .contentMargins(.top, 4, for: .scrollContent)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                Button {
+                    viewModel.isShowingAddSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color.brand, in: Circle())
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+                }
+                .padding(20)
+                .accessibilityLabel("Add transaction")
             }
             .navigationTitle(viewModel.monthTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -59,13 +88,6 @@ struct TransactionsView: View {
                         viewModel.showNextMonth()
                     } label: {
                         Image(systemName: "chevron.right")
-                    }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        viewModel.isShowingAddSheet = true
-                    } label: {
-                        Image(systemName: "plus")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {

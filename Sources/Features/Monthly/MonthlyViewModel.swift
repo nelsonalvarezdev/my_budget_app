@@ -73,6 +73,11 @@ final class MonthlyViewModel {
 
     // MARK: - Actions
 
+    /// True when at least one item is checked, whatever the amounts add up to.
+    func canUncheckAll(_ items: [FixedExpense]) -> Bool {
+        items.contains(where: \.isChecked)
+    }
+
     /// Manual start-of-month reset: nothing is unchecked automatically.
     func uncheckAll(_ items: [FixedExpense]) {
         for item in items where item.isChecked {

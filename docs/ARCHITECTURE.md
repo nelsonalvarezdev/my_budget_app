@@ -104,7 +104,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
   - Estimated monthly expenses = `Σ all expenses − Σ all incomes`
   - Estimated monthly remains = `Monthly income − that`
 - **Tapping a row toggles its check** ("paid / received this month"). Editing and deleting are in the swipe actions and the long-press menu.
-- **Uncheck all** resets every item — the manual start-of-month reset. Nothing resets automatically.
+- **Uncheck all** resets every item — the manual start-of-month reset. Nothing resets automatically. It is enabled whenever at least one item is checked.
 - Expenses can have a category: rows are grouped by category, uncategorized last, tinted with the category colour (uncategorized rows turn green when checked). Incomes have no category and are always green.
 - Amounts must be > 0.
 - Checking or unchecking has **no effect** on Cash, Savings or Balance.
@@ -225,5 +225,3 @@ xcodebuild -project BudgetApp.xcodeproj -scheme BudgetApp -destination 'platform
 ### 2.6 Known leftovers
 
 - Sub-values orphaned by earlier versions are still in existing stores. They are invisible and ignored by totals and backups; an export + import clears them.
-- Cancelling a backup export can re-show the previous backup message (pre-existing, untouched).
-- "Uncheck all" is disabled when the checked net is exactly 0, even if items are checked (pre-existing, untouched).

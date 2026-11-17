@@ -143,7 +143,7 @@ struct MonthlyView: View {
                     } label: {
                         Label("Uncheck all", systemImage: "circle")
                     }
-                    .disabled(totals.checkedNet == 0)
+                    .disabled(!viewModel.canUncheckAll(items))
                 }
             }
             .sheet(isPresented: $viewModel.isShowingAddSheet) {

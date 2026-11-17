@@ -82,6 +82,8 @@ final class TransactionsViewModel {
     }
 
     func handleExportResult(_ result: Result<URL, Error>) {
+        // Start clean so a cancelled export doesn't re-show an older message.
+        backupMessage = nil
         switch result {
         case .success(let url):
             backupMessage = "Backup saved to \(url.lastPathComponent)."

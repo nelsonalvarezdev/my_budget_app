@@ -123,6 +123,25 @@ struct AddTransactionViewModelTests {
 
 @MainActor
 struct TransactionsViewModelTests {
+    @Test func cancelledExportDoesNotReshowAnOlderMessage() {
+        let viewModel = TransactionsViewModel()
+        viewModel.backupMessage = "Data imported successfully."
+
+        viewModel.handleExportResult(.failure(CocoaError(.userCancelled)))
+
+        #expect(viewModel.backupMessage == nil)
+        #expect(!viewModel.isShowingBackupResult)
+    }
+
+    @Test func successfulExportShowsTheSavedFileName() {
+        let viewModel = TransactionsViewModel()
+
+        viewModel.handleExportResult(.success(URL(fileURLWithPath: "/tmp/Budget.json")))
+
+        #expect(viewModel.backupMessage == "Backup saved to Budget.json.")
+        #expect(viewModel.isShowingBackupResult)
+    }
+
     @Test func balanceIgnoresTransactionsAndTheDisplayedMonth() throws {
         let accounts = makeTestAccounts(cash: "1000", savings: "500")
         let extras = [
@@ -177,6 +196,17 @@ struct MonthlyViewModelTests {
         #expect(groups.map(\.key) == ["Housing", "Food", ""])
         #expect(groups[0].expenses.map(\.name) == ["Rent", "Admin fee"])
         #expect(groups[2].expenses.map(\.name) == ["Phone"])
+    }
+
+    @Test func uncheckAllIsAvailableWhenCheckedItemsNetToZero() {
+        let viewModel = MonthlyViewModel()
+        let items = [
+            FixedExpense(name: "Rent", amount: 100, isChecked: true),
+            FixedExpense(name: "Bonus", amount: 100, isChecked: true, isIncome: true),
+        ]
+        #expect(viewModel.canUncheckAll(items))
+        #expect(!viewModel.canUncheckAll([FixedExpense(name: "Phone", amount: 100)]))
+        #expect(!viewModel.canUncheckAll([]))
     }
 
     @Test func uncheckAllResetsExpensesAndIncomes() {

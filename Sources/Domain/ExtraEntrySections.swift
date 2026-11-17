@@ -8,6 +8,8 @@ enum ExtraEntryMode {
     case cumulative
     /// Amount is a base amount × a multiplier.
     case recurring
+    /// Amount is what is left of a budget after its spends.
+    case budget
 }
 
 extension NonFixedExpense {
@@ -27,6 +29,8 @@ extension NonFixedExpense {
             return entry
         case .recurring:
             return NonFixedExpense(name: name, amount: value, isRecurring: true, isIncome: isIncome)
+        case .budget:
+            return NonFixedExpense(name: name, amount: max(value, 0), isIncome: isIncome, isBudget: true)
         }
     }
 }

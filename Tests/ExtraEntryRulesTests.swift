@@ -151,6 +151,73 @@ struct ExtraEntryRulesTests {
         #expect(sections.hasIncomes)
     }
 
+    // MARK: Budget
+
+    @Test func budgetAmountIsWhatIsLeftAfterSpends() {
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 1_000)
+        #expect(budget.amount == 1_000)
+
+        budget.addSpend(300, label: "Market")
+        budget.addSpend(-50)
+        budget.addSpend(0)
+
+        #expect(budget.subExpenses.count == 1)
+        #expect(budget.subExpenses[0].label == "Market")
+        #expect(budget.budgetSpent == 300)
+        #expect(budget.amount == 700)
+        #expect(budget.budgetSpentFraction == 0.3)
+    }
+
+    @Test func overspendingStopsTheReserveAtZero() {
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 1_000)
+        budget.addSpend(1_200)
+        #expect(budget.amount == 0)
+        #expect(budget.budgetOverspend == 200)
+        #expect(budget.budgetSpentFraction == 1)
+    }
+
+    @Test func editingTheBudgetAmountKeepsTheSpends() {
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 1_000)
+        budget.addSpend(300)
+        budget.setBudgetAmount(1_500)
+        #expect(budget.budgetAmount == 1_500)
+        #expect(budget.budgetSpent == 300)
+        #expect(budget.amount == 1_200)
+    }
+
+    @Test func deletingASpendGivesItBackToTheBudget() throws {
+        let context = try makeTestContext()
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 1_000)
+        context.insert(budget)
+        budget.addSpend(300)
+        budget.addSpend(200)
+
+        budget.removeSubValues([budget.subExpenses[0]], in: context)
+
+        #expect(budget.budgetAmount == 1_000)
+        #expect(budget.amount == 800)
+    }
+
+    @Test func convertingANegativeValuesEntryKeepsWhatIsLeft() throws {
+        let context = try makeTestContext()
+        let entry = NonFixedExpense(name: "Mercado mes", amount: 0, isCumulative: true)
+        context.insert(entry)
+        for value: Decimal in [1_150_000, -850_000, -40_000, -90_000, -30_400, -60_100] {
+            entry.addSubValue(value)
+        }
+        #expect(entry.amount == 79_500)
+        #expect(entry.canConvertToBudget)
+
+        entry.convertToBudget(in: context)
+
+        #expect(entry.isBudget)
+        #expect(!entry.isCumulative)
+        #expect(entry.budgetAmount == 1_150_000)
+        #expect(entry.budgetSpent == 1_070_500)
+        #expect(entry.subExpenses.allSatisfy { $0.value > 0 })
+        #expect(entry.amount == 79_500)
+    }
+
     @Test func netEffectIsIncomesMinusExpenses() {
         let sections = ExtraEntrySections(entries: [
             NonFixedExpense(name: "Trip", amount: 300),

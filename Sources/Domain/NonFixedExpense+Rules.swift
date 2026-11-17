@@ -6,12 +6,14 @@ import SwiftData
 /// never touched.
 extension NonFixedExpense {
     /// Cumulative or Recurring entries (listed first, with a fixed color).
-    var isSpecial: Bool { isCumulative || isRecurring }
+    var isSpecial: Bool { isCumulative || isRecurring || isBudget }
 
     // MARK: Cumulative — amount = sum of sub-values
 
     func recalculateCumulativeTotal() {
-        amount = subExpenses.reduce(0) { $0 + $1.value }
+        let total = subExpenses.reduce(0) { $0 + $1.value }
+        // A budget's sub-values are its spends: the amount is what is left.
+        amount = isBudget ? max(budgetAmount - total, 0) : total
     }
 
     /// Adds a sub-value (zero is ignored) and updates the total.
@@ -27,6 +29,54 @@ extension NonFixedExpense {
         for subExpense in removed {
             context.delete(subExpense)
         }
+        recalculateCumulativeTotal()
+    }
+
+    // MARK: Budget — amount = budget − spends, never below zero
+
+    /// Sum of the spends recorded against the budget.
+    var budgetSpent: Decimal { subExpenses.reduce(0) { $0 + $1.value } }
+    /// How far the spends went past the budget (0 when within it).
+    var budgetOverspend: Decimal { max(budgetSpent - budgetAmount, 0) }
+    /// Spent share of the budget, from 0 to 1.
+    var budgetSpentFraction: Double {
+        guard budgetAmount > 0 else { return 0 }
+        return min(max(NSDecimalNumber(decimal: budgetSpent / budgetAmount).doubleValue, 0), 1)
+    }
+
+    /// Changes the amount set aside; the spends are kept.
+    func setBudgetAmount(_ value: Decimal) {
+        budgetAmount = max(value, 0)
+        recalculateCumulativeTotal()
+    }
+
+    /// Records a spend against the budget (only positive values).
+    func addSpend(_ value: Decimal, label: String = "") {
+        guard value > 0 else { return }
+        subExpenses.append(SubExpense(value: value, label: label))
+        recalculateCumulativeTotal()
+    }
+
+    /// True for a cumulative entry used as a budget the old way: positive
+    /// values set aside and negative values spent.
+    var canConvertToBudget: Bool {
+        isCumulative
+            && subExpenses.contains { $0.value < 0 }
+            && subExpenses.contains { $0.value > 0 }
+    }
+
+    /// Turns such an entry into a budget: the positive values become the
+    /// budget amount and each negative value becomes a spend. What is left
+    /// stays the same unless the spends already exceeded the budget.
+    func convertToBudget(in context: ModelContext) {
+        guard canConvertToBudget else { return }
+        let positives = subExpenses.filter { $0.value > 0 }
+        budgetAmount = positives.reduce(0) { $0 + $1.value }
+        subExpenses.removeAll { candidate in positives.contains { $0 === candidate } }
+        for positive in positives { context.delete(positive) }
+        for spend in subExpenses { spend.value = -spend.value }
+        isCumulative = false
+        isBudget = true
         recalculateCumulativeTotal()
     }
 

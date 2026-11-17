@@ -54,6 +54,11 @@ struct NonFixedExpenseDTO: Codable {
     var multiplier: Int?
     /// Optional so backups made before this field existed still import.
     var isIncome: Bool?
+    /// Optional so backups made before these fields existed still import.
+    var isBudget: Bool?
+    var budgetAmount: Decimal?
+    /// Labels of `subExpenses`, in the same order.
+    var subExpenseLabels: [String]?
 }
 
 struct CategoryDTO: Codable {
@@ -91,7 +96,10 @@ enum BackupService {
                 isRecurring: $0.isRecurring,
                 baseAmount: $0.baseAmount,
                 multiplier: $0.multiplier,
-                isIncome: $0.isIncome
+                isIncome: $0.isIncome,
+                isBudget: $0.isBudget,
+                budgetAmount: $0.budgetAmount,
+                subExpenseLabels: $0.subExpenses.map(\.label)
             )
         }
 
@@ -150,10 +158,15 @@ enum BackupService {
                     amount: dto.amount,
                     isCumulative: dto.isCumulative ?? false,
                     isRecurring: dto.isRecurring ?? false,
-                    isIncome: dto.isIncome ?? false
+                    isIncome: dto.isIncome ?? false,
+                    isBudget: dto.isBudget ?? false
                 )
-                for value in dto.subExpenses ?? [] {
-                    expense.subExpenses.append(SubExpense(value: value))
+                let labels = dto.subExpenseLabels ?? []
+                for (index, value) in (dto.subExpenses ?? []).enumerated() {
+                    expense.subExpenses.append(SubExpense(value: value, label: index < labels.count ? labels[index] : ""))
+                }
+                if let budgetAmount = dto.budgetAmount {
+                    expense.budgetAmount = budgetAmount
                 }
                 if let baseAmount = dto.baseAmount {
                     expense.baseAmount = baseAmount

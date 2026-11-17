@@ -28,8 +28,15 @@ final class NonFixedExpense {
     /// added to the balance on the Transactions view instead of subtracted.
     /// Defaults to false so existing rows survive the schema change.
     var isIncome: Bool = false
+    /// True for entries created with the special Budget category: money set
+    /// aside up front and spent down over time. `amount` is what is still
+    /// left (never below zero), so the Balance only reserves the unspent part.
+    /// Defaults to false so existing rows survive the schema change.
+    var isBudget: Bool = false
+    /// The amount set aside (only used when `isBudget` is true). Editable.
+    var budgetAmount: Decimal = 0
 
-    init(name: String, amount: Decimal, isCumulative: Bool = false, isRecurring: Bool = false, isIncome: Bool = false) {
+    init(name: String, amount: Decimal, isCumulative: Bool = false, isRecurring: Bool = false, isIncome: Bool = false, isBudget: Bool = false) {
         self.name = name
         self.amount = amount
         self.isCumulative = isCumulative
@@ -37,6 +44,10 @@ final class NonFixedExpense {
         self.isIncome = isIncome
         if isRecurring {
             self.baseAmount = amount
+        }
+        self.isBudget = isBudget
+        if isBudget {
+            self.budgetAmount = amount
         }
     }
 }
@@ -46,8 +57,12 @@ final class NonFixedExpense {
 @Model
 final class SubExpense {
     var value: Decimal
+    /// What the value was for, e.g. the name of the transaction that
+    /// recorded a budget spend. Empty for values typed by hand.
+    var label: String = ""
 
-    init(value: Decimal) {
+    init(value: Decimal, label: String = "") {
         self.value = value
+        self.label = label
     }
 }

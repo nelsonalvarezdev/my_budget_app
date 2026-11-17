@@ -65,16 +65,13 @@ struct MonthlyView: View {
                     }
                 }
             }
+            .floatingAddButtonMargin()
+            .floatingAddButton("Add monthly item") {
+                viewModel.isShowingAddSheet = true
+            }
             .navigationTitle("Monthly")
             .dismissKeyboardOnTap()
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        viewModel.isShowingAddSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                }
                 ToolbarItem(placement: .secondaryAction) {
                     Button {
                         viewModel.isShowingCategoryManager = true

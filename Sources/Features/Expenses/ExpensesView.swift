@@ -27,17 +27,11 @@ struct ExpensesView: View {
                     entryList(viewModel.sections(entries))
                 }
             }
+            .floatingAddButton("Add entry") {
+                viewModel.isShowingAddSheet = true
+            }
             .navigationTitle("More expenses")
             .dismissKeyboardOnTap()
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        viewModel.isShowingAddSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                }
-            }
             .sheet(isPresented: $viewModel.isShowingAddSheet) {
                 AddMoreExpenseView()
             }
@@ -89,6 +83,7 @@ struct ExpensesView: View {
                 }
             }
         }
+        .floatingAddButtonMargin()
     }
 
     /// Row for a special-category entry: Budget and Cumulative navigate to

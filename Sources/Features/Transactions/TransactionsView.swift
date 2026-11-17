@@ -44,23 +44,11 @@ struct TransactionsView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
-                // Room for the floating add button below the last row.
-                .contentMargins(.bottom, 88, for: .scrollContent)
+                .floatingAddButtonMargin()
                 .contentMargins(.top, 4, for: .scrollContent)
             }
-            .overlay(alignment: .bottomTrailing) {
-                Button {
-                    viewModel.isShowingAddSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 56, height: 56)
-                        .background(Color.brand, in: Circle())
-                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
-                }
-                .padding(20)
-                .accessibilityLabel("Add transaction")
+            .floatingAddButton("Add transaction") {
+                viewModel.isShowingAddSheet = true
             }
             .navigationTitle(viewModel.monthTitle)
             .navigationBarTitleDisplayMode(.inline)

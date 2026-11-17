@@ -64,7 +64,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 
 - **Income / Spent** = sums of the displayed month's transactions. Informational only; they do not feed the Balance.
 - Each day's header shows the day's net (income − expenses). Rows name their category in text, so they carry no colour dot.
-- New transactions are added with the floating + button.
+- New transactions are added with the floating + button, the same one every tab uses to add its items (`floatingAddButton`).
 
 **List**
 

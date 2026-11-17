@@ -57,12 +57,9 @@ struct AddEditFixedExpenseView: View {
                 if !isIncome {
                     Picker("Category", selection: $selectedCategory) {
                         Text("None").tag(ExpenseCategory?.none)
-                        ForEach(categories) { category in
-                            HStack {
-                                Circle().fill(category.color).frame(width: 14, height: 14)
-                                Text(category.name)
-                            }
-                            .tag(ExpenseCategory?.some(category))
+                        ForEach(categories.alphabetical) { category in
+                            Text(category.name)
+                                .tag(ExpenseCategory?.some(category))
                         }
                     }
                 }

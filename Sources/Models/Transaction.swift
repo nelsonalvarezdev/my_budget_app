@@ -22,7 +22,8 @@ enum TransactionKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Payment source for nickel-and-dime expenses.
+/// Where an expense was paid from, or where an income was received.
+/// Incomes only use `cash` and `savings` (received by transfer).
 enum PaymentSource: String, Codable, CaseIterable, Identifiable {
     case cash
     case savings
@@ -35,6 +36,17 @@ enum PaymentSource: String, Codable, CaseIterable, Identifiable {
         case .cash: return "Cash"
         case .savings: return "Savings account"
         case .creditCard: return "Credit card"
+        }
+    }
+
+    /// The choices offered for an income.
+    static let incomeOptions: [PaymentSource] = [.cash, .savings]
+
+    /// How an income received this way is named.
+    var incomeLabel: String {
+        switch self {
+        case .cash, .creditCard: return "Cash"
+        case .savings: return "Transfer"
         }
     }
 }

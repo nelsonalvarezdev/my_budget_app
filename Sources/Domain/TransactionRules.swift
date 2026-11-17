@@ -43,7 +43,8 @@ enum TransactionRules {
     /// What creating a transaction does to the account fields:
     /// - Cash / Savings expenses subtract from their field.
     /// - Credit-card expenses subtract from nothing (deferred payment).
-    /// - Income adds to Cash.
+    /// - Income received in cash adds to Cash; received by transfer, it adds
+    ///   to Savings.
     /// Applied once, when the transaction is created. Deleting a transaction
     /// intentionally does NOT revert it.
     static func accountEffect(amount: Decimal, kind: TransactionKind, paidWith: PaymentSource) -> AccountDelta {
@@ -51,6 +52,7 @@ enum TransactionRules {
         case (.expense, .cash): return AccountDelta(cash: -amount)
         case (.expense, .savings): return AccountDelta(savings: -amount)
         case (.expense, .creditCard): return AccountDelta()
+        case (.income, .savings): return AccountDelta(savings: amount)
         case (.income, _): return AccountDelta(cash: amount)
         }
     }

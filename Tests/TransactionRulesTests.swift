@@ -21,10 +21,14 @@ struct TransactionRulesTests {
         #expect(delta == AccountDelta())
     }
 
-    @Test(arguments: PaymentSource.allCases)
-    func incomeAlwaysAddsToCash(paidWith: PaymentSource) {
-        let delta = TransactionRules.accountEffect(amount: 70_000, kind: .income, paidWith: paidWith)
+    @Test func incomeReceivedInCashAddsToCash() {
+        let delta = TransactionRules.accountEffect(amount: 70_000, kind: .income, paidWith: .cash)
         #expect(delta == AccountDelta(cash: 70_000, savings: 0))
+    }
+
+    @Test func incomeReceivedByTransferAddsToSavings() {
+        let delta = TransactionRules.accountEffect(amount: 70_000, kind: .income, paidWith: .savings)
+        #expect(delta == AccountDelta(cash: 0, savings: 70_000))
     }
 
     // MARK: Month filtering, totals and grouping

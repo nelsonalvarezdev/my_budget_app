@@ -30,10 +30,9 @@ struct TransactionRow: View {
         .padding(.vertical, 2)
     }
 
-    /// Category, plus how an expense was paid.
+    /// Category, plus how an expense was paid or an income received.
     private var detail: String {
-        transaction.kind == .expense
-            ? "\(transaction.category) · \(transaction.paidWith.label)"
-            : transaction.category
+        let source = transaction.kind == .expense ? transaction.paidWith.label : transaction.paidWith.incomeLabel
+        return "\(transaction.category) · \(source)"
     }
 }

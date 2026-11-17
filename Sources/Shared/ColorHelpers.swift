@@ -1,33 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Menu icon rendering
-
-extension UIImage {
-    /// Renders a small circle as a UIImage. Context menus (UIKit) strip
-    /// SwiftUI color styling, so colored menu icons must be real images.
-    static func categoryDot(color: Color, filled: Bool) -> UIImage {
-        let diameter: CGFloat = 18
-        let inset: CGFloat = 1.5
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = UIScreen.main.scale
-        return UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter), format: format)
-            .image { _ in
-                let rect = CGRect(x: 0, y: 0, width: diameter, height: diameter)
-                    .insetBy(dx: inset, dy: inset)
-                let path = UIBezierPath(ovalIn: rect)
-                if filled {
-                    UIColor(color).setFill()
-                    path.fill()
-                } else {
-                    UIColor(color).setStroke()
-                    path.lineWidth = 1.5
-                    path.stroke()
-                }
-            }
-    }
-}
-
 // MARK: - Hex color helpers
 
 extension Color {

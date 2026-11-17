@@ -105,24 +105,12 @@ struct MonthlyView: View {
         FixedExpenseRow(expense: expense, showsCategoryName: showsCategoryName)
             .contextMenu {
                 Menu {
-                    Button {
+                    Button("None") {
                         expense.category = nil
-                    } label: {
-                        Label {
-                            Text("None")
-                        } icon: {
-                            Image(uiImage: .categoryDot(color: .secondary, filled: false))
-                        }
                     }
-                    ForEach(categories) { category in
-                        Button {
+                    ForEach(categories.alphabetical) { category in
+                        Button(category.name) {
                             expense.category = category
-                        } label: {
-                            Label {
-                                Text(category.name)
-                            } icon: {
-                                Image(uiImage: .categoryDot(color: category.color, filled: true))
-                            }
                         }
                     }
                 } label: {

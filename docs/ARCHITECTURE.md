@@ -25,11 +25,11 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 
 **SwiftData models**
 
-- `Transaction` — `name`, `amount` (always > 0), `kind` (income/expense), `category` (plain text, not a link), `note`, `date`, `paidWith` (cash / savings / creditCard).
+- `Transaction` — `name`, `amount` (always > 0), `kind` (income/expense), `category` (plain text, not a link), `note`, `date`, `paidWith` (cash / savings / creditCard; for an income, cash or savings = "Transfer").
 - `FixedExpense` — `name`, `amount` (> 0), `isChecked`, `isIncome`, `category` (optional link to `ExpenseCategory`).
 - `NonFixedExpense` — `name`, `amount`, `isIncome`, plus two special modes: `isCumulative` (+ `subExpenses`) and `isRecurring` (+ `baseAmount`, `multiplier`).
 - `SubExpense` — `value` only.
-- `ExpenseCategory` — `name`, `colorHex`.
+- `ExpenseCategory` — `name`, `colorHex` (no longer shown or chosen; kept for compatibility).
 
 **Settings** (`AccountsStore`, persisted in `UserDefaults` as plain-digit strings)
 
@@ -78,12 +78,13 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 - Category options: for expenses, `None` + the shared category list; for incomes, a fixed list (Salary, Freelance, Gift, Investment, Other). Switching type resets the category.
 - Effect on the account fields, applied once at save time:
 
-| Kind | Paid with | Effect |
+| Kind | Paid with / Received by | Effect |
 |---|---|---|
 | Expense | Cash | Cash − amount |
 | Expense | Savings account | Savings − amount |
 | Expense | Credit card | none (deferred payment) |
-| Income | — | Cash + amount |
+| Income | Cash | Cash + amount |
+| Income | Transfer | Savings + amount |
 
 **Deleting**
 
@@ -110,14 +111,14 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 - Expenses are grouped by category. A **checked expense moves to a "Paid" section at the end of the list**; "Paid" is only a title of the view, not a category: the expense keeps its own and returns to it when unchecked. Rows carry no colour dot: under a category header the header names the category, and under "Paid" the row shows its category name in small text. Checked incomes stay under Incomes.
 - **Tapping a row toggles its check** ("paid / received this month"). Editing and deleting are in the swipe actions and the long-press menu.
 - **Uncheck all** resets every item — the manual start-of-month reset. Nothing resets automatically. It is enabled whenever at least one item is checked.
-- Expenses can have a category: rows are grouped by category, uncategorized last, tinted with the category colour (uncategorized rows turn green when checked). Incomes have no category and are always green.
+- Expenses can have a category: rows are grouped by category, uncategorized last. Incomes have no category.
 - Amounts must be > 0.
 - Checking or unchecking has **no effect** on Cash, Savings or Balance.
 
 **Categories**
 
 - Eight built-in defaults (Housing, Food & Groceries, Transport, Utilities, Health, Entertainment, Education, Savings). They cannot be deleted and are re-created at launch if missing.
-- Users can add their own (name + colour) and delete them. Monthly items lose the link; transactions keep the category name as text.
+- Categories have no colour. They are listed A to Z wherever they appear (manager, pickers, "Assign to category" menu). Users can add their own (name only) and delete them. Monthly items lose the link; transactions keep the category name as text.
 
 ### 1.6 Expenses view ("More expenses")
 
@@ -195,7 +196,7 @@ Sources/
                   MonthlyReportView, TransactionRow, BalanceHeroCard
     Monthly/      MonthlyView + ViewModel, AddEditFixedExpenseView, CategoryManagerView
     Expenses/     ExpensesView + ViewModel, AddMoreExpenseView, SubExpensesView, BudgetDetailView
-  Shared/         Theme (accent colour, HeroCard, SectionHeader, CategoryDot, TagPill),
+  Shared/         Theme (accent colour, HeroCard, SectionHeader, TagPill, ShareBar, FloatingAddButton),
                   CurrencyField, DismissKeyboardOnTap, ColorHelpers
 Tests/            unit tests for Domain, AccountsStore and the view models
 ```

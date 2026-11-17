@@ -64,7 +64,7 @@ final class AddTransactionViewModel {
     /// own fixed list.
     func categoryOptions(storedCategories: [ExpenseCategory]) -> [String] {
         if kind == .expense {
-            let stored = storedCategories.map(\.name)
+            let stored = storedCategories.alphabetical.map(\.name)
             return [Self.noCategory] + (stored.isEmpty ? Transaction.expenseCategories : stored)
         }
         return Transaction.incomeCategories
@@ -83,9 +83,13 @@ final class AddTransactionViewModel {
         !trimmedName.isEmpty && (amount ?? 0) > 0
     }
 
-    /// Switching type resets the category so it stays valid.
+    /// Switching type resets the category, and the payment source when it
+    /// is not offered for the new type, so both stay valid.
     func resetCategory(storedCategories: [ExpenseCategory]) {
         category = categoryOptions(storedCategories: storedCategories)[0]
+        if kind == .income && !PaymentSource.incomeOptions.contains(paidWith) {
+            paidWith = .cash
+        }
     }
 
     /// Creates the transaction. Returns false when the input is invalid.

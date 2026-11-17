@@ -51,18 +51,6 @@ struct SectionHeader: View {
     }
 }
 
-/// Small coloured dot marking a row's category.
-struct CategoryDot: View {
-    let color: Color?
-
-    var body: some View {
-        Circle()
-            .fill(color ?? Color.secondary.opacity(0.35))
-            .frame(width: 10, height: 10)
-            .accessibilityHidden(true)
-    }
-}
-
 /// Small grey tag under a row's name.
 struct TagPill: View {
     let text: String

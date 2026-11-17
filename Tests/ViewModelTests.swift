@@ -141,6 +141,44 @@ struct AddTransactionViewModelTests {
         #expect(accounts.cash == 12_000)
     }
 
+    @Test func incomeByTransferAddsToSavings() throws {
+        let context = try makeTestContext()
+        let accounts = makeTestAccounts(cash: "10000", savings: "5000")
+        let viewModel = AddTransactionViewModel()
+        viewModel.kind = .income
+        viewModel.paidWith = .savings
+        viewModel.name = "Salary"
+        viewModel.amountText = "2000"
+
+        viewModel.save(context: context, accounts: accounts)
+
+        #expect(accounts.cash == 10_000)
+        #expect(accounts.savings == 7_000)
+    }
+
+    @Test func switchingToIncomeDropsTheCreditCard() {
+        let viewModel = AddTransactionViewModel()
+        viewModel.paidWith = .creditCard
+        viewModel.kind = .income
+        viewModel.resetCategory(storedCategories: [])
+        #expect(viewModel.paidWith == .cash)
+
+        viewModel.paidWith = .savings
+        viewModel.kind = .expense
+        viewModel.resetCategory(storedCategories: [])
+        #expect(viewModel.paidWith == .savings)
+    }
+
+    @Test func expenseCategoryOptionsAreAlphabetical() {
+        let viewModel = AddTransactionViewModel()
+        let stored = [
+            ExpenseCategory(name: "transport", colorHex: "#000000"),
+            ExpenseCategory(name: "Food", colorHex: "#000000"),
+            ExpenseCategory(name: "Ahorro", colorHex: "#000000"),
+        ]
+        #expect(viewModel.categoryOptions(storedCategories: stored) == ["None", "Ahorro", "Food", "transport"])
+    }
+
     @Test func invalidInputSavesNothing() throws {
         let context = try makeTestContext()
         let accounts = makeTestAccounts(cash: "10000")

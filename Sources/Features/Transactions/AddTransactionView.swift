@@ -84,6 +84,12 @@ struct AddTransactionView: View {
                             Text(source.label).tag(source)
                         }
                     }
+                } else {
+                    Picker("Received by", selection: $viewModel.paidWith) {
+                        ForEach(PaymentSource.incomeOptions) { source in
+                            Text(source.incomeLabel).tag(source)
+                        }
+                    }
                 }
 
                 TextField("Note (optional)", text: $viewModel.note)

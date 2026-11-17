@@ -5,10 +5,14 @@ import SwiftData
 @Model
 final class ExpenseCategory {
     var name: String
-    /// Stored as a hex string (e.g. "#4CAF50") so it persists cleanly in SwiftData.
+    /// Stored as a hex string (e.g. "#4CAF50"). No longer shown or chosen in
+    /// the app; kept so existing stores and backups stay compatible.
     var colorHex: String
 
-    init(name: String, colorHex: String) {
+    /// Colour given to categories the user creates.
+    static let neutralColorHex = "#8E8E93"
+
+    init(name: String, colorHex: String = ExpenseCategory.neutralColorHex) {
         self.name = name
         self.colorHex = colorHex
     }
@@ -60,5 +64,12 @@ final class ExpenseCategory {
     /// True if this name matches one of the special categories.
     static func isSpecial(_ name: String) -> Bool {
         specials.contains { $0.name == name }
+    }
+}
+
+extension Array where Element == ExpenseCategory {
+    /// Sorted by name, A to Z, ignoring case and accents.
+    var alphabetical: [ExpenseCategory] {
+        sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 }

@@ -39,7 +39,18 @@ struct SubExpensesView: View {
                 .font(.subheadline.weight(.semibold))
                 .textCase(nil)
             } footer: {
-                Text("Total: \(Currency.format(expense.amount)). Every value adds up to the expense's total.")
+                Text("Every value adds up to the total.")
+            }
+
+            Section {
+                HStack {
+                    Text("Total")
+                        .font(.headline)
+                    Spacer()
+                    Text(Currency.format(expense.amount))
+                        .font(.headline.monospacedDigit())
+                }
+                .accessibilityElement(children: .combine)
             }
 
             Section {

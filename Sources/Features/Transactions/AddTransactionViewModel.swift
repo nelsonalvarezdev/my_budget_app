@@ -28,10 +28,12 @@ final class AddTransactionViewModel {
         selectedMonthlyItem?.name ?? selectedBudget?.name ?? "None"
     }
 
-    /// Monthly items in the order the "Pays for" list shows them: those still
-    /// to pay first, the ones already checked at the end.
+    /// Monthly expenses in the order the "Pays for" list shows them: those
+    /// still to pay first, the ones already checked at the end. Monthly
+    /// incomes are left out: a transaction does not pay for an income.
     func paysForOrder(_ items: [FixedExpense]) -> [FixedExpense] {
-        items.filter { !$0.isChecked } + items.filter(\.isChecked)
+        let expenses = items.filter { !$0.isIncome }
+        return expenses.filter { !$0.isChecked } + expenses.filter(\.isChecked)
     }
 
     /// Pays a Monthly item: prefills name, amount and category (the user can

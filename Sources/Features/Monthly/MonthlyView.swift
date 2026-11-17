@@ -24,42 +24,14 @@ struct MonthlyView: View {
                 }
 
                 ForEach(viewModel.groupedExpenses(items)) { group in
-                    Section {
-                        ForEach(group.expenses) { expense in
-                            FixedExpenseRow(expense: expense)
-                                .contextMenu {
-                                    Menu {
-                                        Button {
-                                            expense.category = nil
-                                        } label: {
-                                            Label {
-                                                Text("None")
-                                            } icon: {
-                                                Image(uiImage: .categoryDot(color: .secondary, filled: false))
-                                            }
-                                        }
-                                        ForEach(categories) { category in
-                                            Button {
-                                                expense.category = category
-                                            } label: {
-                                                Label {
-                                                    Text(category.name)
-                                                } icon: {
-                                                    Image(uiImage: .categoryDot(color: category.color, filled: true))
-                                                }
-                                            }
-                                        }
-                                    } label: {
-                                        Label("Assign to category", systemImage: "tag")
-                                    }
-                                    editAndDeleteButtons(for: expense, editTitle: "Edit…")
-                                }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    editAndDeleteButtons(for: expense, editTitle: "Edit")
-                                }
+                    if !group.unpaidExpenses.isEmpty {
+                        Section {
+                            ForEach(group.unpaidExpenses) { expense in
+                                expenseRow(expense)
+                            }
+                        } header: {
+                            SectionHeader(title: group.title, trailing: "\(group.checkedCount) of \(group.expenses.count) paid")
                         }
-                    } header: {
-                        SectionHeader(title: group.title, trailing: "\(group.checkedCount) of \(group.expenses.count) paid")
                     }
                 }
 
@@ -77,6 +49,17 @@ struct MonthlyView: View {
                         }
                     } header: {
                         SectionHeader(title: "Incomes", trailing: "\(incomes.filter(\.isChecked).count) of \(incomes.count) received")
+                    }
+                }
+
+                let paid = viewModel.paidExpenses(items)
+                if !paid.isEmpty {
+                    Section {
+                        ForEach(paid) { expense in
+                            expenseRow(expense)
+                        }
+                    } header: {
+                        SectionHeader(title: "Paid", trailing: Currency.format(paid.reduce(0) { $0 + $1.amount }))
                     }
                 }
             }
@@ -116,6 +99,41 @@ struct MonthlyView: View {
                 CategoryManagerView()
             }
         }
+    }
+
+    /// A fixed-expense row with its category menu, edit and delete actions.
+    private func expenseRow(_ expense: FixedExpense) -> some View {
+        FixedExpenseRow(expense: expense)
+            .contextMenu {
+                Menu {
+                    Button {
+                        expense.category = nil
+                    } label: {
+                        Label {
+                            Text("None")
+                        } icon: {
+                            Image(uiImage: .categoryDot(color: .secondary, filled: false))
+                        }
+                    }
+                    ForEach(categories) { category in
+                        Button {
+                            expense.category = category
+                        } label: {
+                            Label {
+                                Text(category.name)
+                            } icon: {
+                                Image(uiImage: .categoryDot(color: category.color, filled: true))
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Assign to category", systemImage: "tag")
+                }
+                editAndDeleteButtons(for: expense, editTitle: "Edit…")
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                editAndDeleteButtons(for: expense, editTitle: "Edit")
+            }
     }
 
     /// Edit and Delete actions shared by the context menu and the swipe.
@@ -195,7 +213,8 @@ struct FixedExpenseRow: View {
 
     var body: some View {
         Button {
-            expense.isChecked.toggle()
+            // Animated: a checked expense moves to the "Paid" section.
+            withAnimation { expense.isChecked.toggle() }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: expense.isChecked ? "checkmark.circle.fill" : "circle")

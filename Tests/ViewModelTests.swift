@@ -105,6 +105,15 @@ struct AddTransactionViewModelTests {
         #expect(viewModel.paysForOrder(items).map(\.name) == ["Phone", "Power", "Rent", "Gym"])
     }
 
+    @Test func paysForLeavesOutMonthlyIncomes() {
+        let items = [
+            FixedExpense(name: "Rent", amount: 1),
+            FixedExpense(name: "Salary bonus", amount: 1, isIncome: true),
+            FixedExpense(name: "Refund", amount: 1, isChecked: true, isIncome: true),
+        ]
+        #expect(AddTransactionViewModel().paysForOrder(items).map(\.name) == ["Rent"])
+    }
+
     @Test func creditCardExpenseLeavesTheAccountsUntouched() throws {
         let context = try makeTestContext()
         let accounts = makeTestAccounts(cash: "10000", savings: "5000")
@@ -261,6 +270,25 @@ struct MonthlyViewModelTests {
         #expect(groups.map(\.key) == ["Housing", "Food", ""])
         #expect(groups[0].expenses.map(\.name) == ["Rent", "Admin fee"])
         #expect(groups[2].expenses.map(\.name) == ["Phone"])
+    }
+
+    @Test func checkedExpensesMoveToPaidAndKeepTheirCategory() {
+        let housing = ExpenseCategory(name: "Housing", colorHex: "#111111")
+        let rent = FixedExpense(name: "Rent", amount: 1, isChecked: true, category: housing)
+        let admin = FixedExpense(name: "Admin fee", amount: 1, category: housing)
+        let bonus = FixedExpense(name: "Bonus", amount: 1, isChecked: true, isIncome: true)
+        let viewModel = MonthlyViewModel()
+        let items = [rent, admin, bonus]
+
+        let group = viewModel.groupedExpenses(items)[0]
+        #expect(group.unpaidExpenses.map(\.name) == ["Admin fee"])
+        #expect(group.checkedCount == 1)
+        #expect(viewModel.paidExpenses(items).map(\.name) == ["Rent"])
+        #expect(rent.category === housing)
+
+        rent.isChecked = false
+        #expect(viewModel.paidExpenses(items).isEmpty)
+        #expect(viewModel.groupedExpenses(items)[0].unpaidExpenses.count == 2)
     }
 
     @Test func uncheckAllIsAvailableWhenCheckedItemsNetToZero() {

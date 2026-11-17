@@ -73,7 +73,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 **Creating a transaction**
 
 - Requires a non-empty name and an amount > 0.
-- An expense has one **Pays for** field: None, a Monthly item or a budget, never both. The Monthly items list every item (incomes included), those still to pay first and the already-checked ones greyed out at the end, still selectable. A budget prefills only the name.
+- An expense has one **Pays for** field: None, a Monthly item or a budget, never both. The Monthly items list only the expenses (a transaction does not pay for an income), those still to pay first and the already-checked ones greyed out at the end, still selectable. A budget prefills only the name.
 - An expense may be created from a Monthly item. Picking one prefills name, amount and category, all still editable. On save that item becomes **checked** in Monthly, even if the amount was edited.
 - Category options: for expenses, `None` + the shared category list; for incomes, a fixed list (Salary, Freelance, Gift, Investment, Other). Switching type resets the category.
 - Effect on the account fields, applied once at save time:
@@ -107,6 +107,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 - **Hold** the Remaining amount or the "Paid" label to peek at the *estimate*, which counts every item regardless of checked state:
   - Estimated monthly expenses = `Σ all expenses − Σ all incomes`
   - Estimated monthly remains = `Monthly income − that`
+- Expenses are grouped by category. A **checked expense moves to a "Paid" section at the end of the list**; "Paid" is only a title of the view, not a category: the expense keeps its own and returns to it when unchecked. Checked incomes stay under Incomes.
 - **Tapping a row toggles its check** ("paid / received this month"). Editing and deleting are in the swipe actions and the long-press menu.
 - **Uncheck all** resets every item — the manual start-of-month reset. Nothing resets automatically. It is enabled whenever at least one item is checked.
 - Expenses can have a category: rows are grouped by category, uncategorized last, tinted with the category colour (uncategorized rows turn green when checked). Incomes have no category and are always green.
@@ -152,7 +153,7 @@ Four kinds of entry, chosen at creation (None / Cumulative / Recurring / Budget)
 | 1 | Deleting a transaction does not return the money | Intentional — rule in 1.4 |
 | 2 | Balance is the same for every displayed month | Intentional — rule in 1.4 |
 | 3 | Mock data re-seeded whenever a list was empty | Removed — the app never inserts mock data |
-| 4 | The Monthly items offered when adding a transaction (now under "Pays for") also list fixed incomes | Keep; variables renamed to `monthlyItems` |
+| 4 | The Monthly items offered when adding a transaction also listed fixed incomes | Changed later: "Pays for" lists Monthly expenses only |
 | 5 | Balance read extra entries with a manual fetch | Now a `@Query` (no behaviour change) |
 | 6 | Sub-values left orphaned in the store on delete | Fixed — deletes now remove them |
 | 7 | Monthly row tap: toggle or edit? | Tap toggles the check |

@@ -6,8 +6,8 @@ struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AccountsStore.self) private var accounts
 
-    /// Every item of the Monthly view, offered in the "Pays for" list to
-    /// prefill the form.
+    /// Every item of the Monthly view; its expenses are offered in the
+    /// "Pays for" list to prefill the form.
     @Query private var monthlyItems: [FixedExpense]
 
     /// Expense categories from the same store the Monthly view uses, so both

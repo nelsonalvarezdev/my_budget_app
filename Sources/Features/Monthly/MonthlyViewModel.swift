@@ -11,6 +11,9 @@ struct MonthlyCategoryGroup: Identifiable {
 
     var title: String { key.isEmpty ? "No category" : key }
     var checkedCount: Int { expenses.filter(\.isChecked).count }
+    /// The expenses still listed under the category: checked ones move to
+    /// the view's "Paid" section.
+    var unpaidExpenses: [FixedExpense] { expenses.filter { !$0.isChecked } }
 }
 
 /// Estimated figure shown when the user holds tap on a summary row.
@@ -62,6 +65,13 @@ final class MonthlyViewModel {
             groups.append(MonthlyCategoryGroup(key: "", expenses: uncategorized))
         }
         return groups
+    }
+
+    /// Checked expenses, shown together at the end of the list under "Paid".
+    /// "Paid" is only a title of the view, not a stored category: each
+    /// expense keeps its own category and returns to it when unchecked.
+    func paidExpenses(_ items: [FixedExpense]) -> [FixedExpense] {
+        items.filter { !$0.isIncome && $0.isChecked }
     }
 
     // MARK: - Hold-to-peek estimates

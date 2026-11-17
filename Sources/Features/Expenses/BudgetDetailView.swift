@@ -83,8 +83,11 @@ struct BudgetDetailView: View {
 
     @State private var budgetText = ""
     @State private var newSpendText = ""
+    @State private var newSpendName = ""
     @State private var isConfirmingClear = false
-    @FocusState private var isNewSpendFocused: Bool
+    @FocusState private var newSpendFocus: NewSpendField?
+
+    private enum NewSpendField { case name, value }
 
     var body: some View {
         List {
@@ -142,12 +145,7 @@ struct BudgetDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(expense.subExpenses) { spend in
-                        HStack {
-                            Text(spend.label.isEmpty ? "Spend" : spend.label)
-                            Spacer()
-                            Text(Currency.format(spend.value))
-                                .font(.body.monospacedDigit())
-                        }
+                        BudgetSpendRow(spend: spend)
                     }
                     .onDelete { offsets in
                         expense.removeSubValues(offsets.map { expense.subExpenses[$0] }, in: modelContext)
@@ -172,10 +170,15 @@ struct BudgetDetailView: View {
             }
 
             Section {
+                TextField("Name (optional)", text: $newSpendName)
+                    .autocorrectionDisabled()
+                    .focused($newSpendFocus, equals: .name)
+                    .submitLabel(.next)
+                    .onSubmit { newSpendFocus = .value }
                 HStack {
                     TextField("New spend", text: $newSpendText)
                         .keyboardType(.numberPad)
-                        .focused($isNewSpendFocused)
+                        .focused($newSpendFocus, equals: .value)
                         .onSubmit { addSpend() }
                     Button("Add") { addSpend() }
                         .disabled(newSpend == nil)
@@ -199,8 +202,24 @@ struct BudgetDetailView: View {
 
     private func addSpend() {
         guard let newSpend else { return }
-        expense.addSpend(newSpend)
+        expense.addSpend(newSpend, label: newSpendName.trimmingCharacters(in: .whitespaces))
         newSpendText = ""
-        isNewSpendFocused = false
+        newSpendName = ""
+        newSpendFocus = nil
+    }
+}
+
+/// A spend of a budget: its optional name, editable in place (an unnamed
+/// spend reads "Spend"), and its amount.
+private struct BudgetSpendRow: View {
+    @Bindable var spend: SubExpense
+
+    var body: some View {
+        HStack {
+            TextField("Spend", text: $spend.label)
+                .autocorrectionDisabled()
+            Text(Currency.format(spend.value))
+                .font(.body.monospacedDigit())
+        }
     }
 }

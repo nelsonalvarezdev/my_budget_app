@@ -44,9 +44,10 @@ struct AddTransactionViewModelTests {
         let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 5_000)
         context.insert(budget)
         let viewModel = AddTransactionViewModel()
+        viewModel.payFor(budget: budget)
+        #expect(viewModel.name == "Groceries")
         viewModel.name = "Market"
         viewModel.amountText = "3000"
-        viewModel.selectedBudget = budget
 
         viewModel.save(context: context, accounts: accounts)
 
@@ -64,13 +65,44 @@ struct AddTransactionViewModelTests {
         context.insert(budget)
         let viewModel = AddTransactionViewModel()
         viewModel.kind = .income
+        viewModel.payFor(budget: budget)
         viewModel.name = "Gift"
         viewModel.amountText = "3000"
-        viewModel.selectedBudget = budget
 
         viewModel.save(context: context, accounts: accounts)
 
         #expect(budget.amount == 5_000)
+    }
+
+    @Test func paysForIsEitherAMonthlyItemOrABudgetNeverBoth() {
+        let rent = FixedExpense(name: "Rent", amount: 1_000)
+        let budget = NonFixedExpense.make(name: "Groceries", isIncome: false, mode: .budget, value: 5_000)
+        let viewModel = AddTransactionViewModel()
+        #expect(viewModel.paysForTitle == "None")
+
+        viewModel.payFor(monthlyItem: rent, storedCategories: [])
+        #expect(viewModel.paysForTitle == "Rent")
+
+        viewModel.payFor(budget: budget)
+        #expect(viewModel.selectedMonthlyItem == nil)
+        #expect(viewModel.paysForTitle == "Groceries")
+
+        viewModel.payFor(monthlyItem: rent, storedCategories: [])
+        #expect(viewModel.selectedBudget == nil)
+
+        viewModel.payForNothing()
+        #expect(viewModel.paysForTitle == "None")
+    }
+
+    @Test func paysForListsPaidMonthlyItemsLast() {
+        let viewModel = AddTransactionViewModel()
+        let items = [
+            FixedExpense(name: "Rent", amount: 1, isChecked: true),
+            FixedExpense(name: "Phone", amount: 1),
+            FixedExpense(name: "Gym", amount: 1, isChecked: true),
+            FixedExpense(name: "Power", amount: 1),
+        ]
+        #expect(viewModel.paysForOrder(items).map(\.name) == ["Phone", "Power", "Rent", "Gym"])
     }
 
     @Test func creditCardExpenseLeavesTheAccountsUntouched() throws {
@@ -120,8 +152,7 @@ struct AddTransactionViewModelTests {
         context.insert(rent)
 
         let viewModel = AddTransactionViewModel()
-        viewModel.selectedMonthlyItem = rent
-        viewModel.prefillFromSelectedMonthlyItem(storedCategories: [housing])
+        viewModel.payFor(monthlyItem: rent, storedCategories: [housing])
 
         #expect(viewModel.name == "Rent")
         #expect(viewModel.amountText == "1200000")
@@ -139,8 +170,7 @@ struct AddTransactionViewModelTests {
         let item = FixedExpense(name: "Phone", amount: 100)
         let viewModel = AddTransactionViewModel()
         viewModel.category = "Housing"
-        viewModel.selectedMonthlyItem = item
-        viewModel.prefillFromSelectedMonthlyItem(storedCategories: [])
+        viewModel.payFor(monthlyItem: item, storedCategories: [])
         #expect(viewModel.category == AddTransactionViewModel.noCategory)
     }
 

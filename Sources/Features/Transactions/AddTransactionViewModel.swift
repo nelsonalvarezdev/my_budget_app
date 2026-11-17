@@ -17,11 +17,45 @@ final class AddTransactionViewModel {
     var note = ""
     var date: Date = .now
     var paidWith: PaymentSource = .cash
-    /// Monthly item picked in the "Fixed expense" picker to prefill the
-    /// form. The picker lists every Monthly item (expenses and incomes).
-    var selectedMonthlyItem: FixedExpense?
-    /// Budget entry (Expenses view) this expense is spent from, if any.
-    var selectedBudget: NonFixedExpense?
+    /// What the transaction pays for, picked in the "Pays for" field: either
+    /// a Monthly item or a budget, never both. See `payFor(monthlyItem:)`
+    /// and `payFor(budget:)`.
+    private(set) var selectedMonthlyItem: FixedExpense?
+    private(set) var selectedBudget: NonFixedExpense?
+
+    /// Title of the current "Pays for" choice.
+    var paysForTitle: String {
+        selectedMonthlyItem?.name ?? selectedBudget?.name ?? "None"
+    }
+
+    /// Monthly items in the order the "Pays for" list shows them: those still
+    /// to pay first, the ones already checked at the end.
+    func paysForOrder(_ items: [FixedExpense]) -> [FixedExpense] {
+        items.filter { !$0.isChecked } + items.filter(\.isChecked)
+    }
+
+    /// Pays a Monthly item: prefills name, amount and category (the user can
+    /// still adjust them). An item with no category maps to "None".
+    func payFor(monthlyItem item: FixedExpense, storedCategories: [ExpenseCategory]) {
+        selectedMonthlyItem = item
+        selectedBudget = nil
+        name = item.name
+        amountText = Currency.formatForEditing(item.amount)
+        let categoryName = item.category?.name ?? Self.noCategory
+        category = categoryOptions(storedCategories: storedCategories).contains(categoryName) ? categoryName : Self.noCategory
+    }
+
+    /// Spends from a budget: prefills the name; the amount is typed.
+    func payFor(budget: NonFixedExpense) {
+        selectedBudget = budget
+        selectedMonthlyItem = nil
+        name = budget.name
+    }
+
+    func payForNothing() {
+        selectedMonthlyItem = nil
+        selectedBudget = nil
+    }
 
     /// Category options for the current kind. Expenses use the shared
     /// ExpenseCategory list (same as the Monthly view); incomes keep their
@@ -45,16 +79,6 @@ final class AddTransactionViewModel {
     /// A name and an amount greater than zero are required.
     var isInputValid: Bool {
         !trimmedName.isEmpty && (amount ?? 0) > 0
-    }
-
-    /// Picking a Monthly item prefills name, amount and category; the user
-    /// can still adjust them. An item with no category maps to "None".
-    func prefillFromSelectedMonthlyItem(storedCategories: [ExpenseCategory]) {
-        guard let item = selectedMonthlyItem else { return }
-        name = item.name
-        amountText = Currency.formatForEditing(item.amount)
-        let categoryName = item.category?.name ?? Self.noCategory
-        category = categoryOptions(storedCategories: storedCategories).contains(categoryName) ? categoryName : Self.noCategory
     }
 
     /// Switching type resets the category so it stays valid.

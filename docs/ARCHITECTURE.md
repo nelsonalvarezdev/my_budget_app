@@ -73,7 +73,8 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 **Creating a transaction**
 
 - Requires a non-empty name and an amount > 0.
-- An expense may be created from a Monthly item ("Fixed expense" picker, which lists every Monthly item, incomes included). Picking one prefills name, amount and category, all still editable. On save that item becomes **checked** in Monthly, even if the amount was edited.
+- An expense has one **Pays for** field: None, a Monthly item or a budget, never both. The Monthly items list every item (incomes included), those still to pay first and the already-checked ones greyed out at the end, still selectable. A budget prefills only the name.
+- An expense may be created from a Monthly item. Picking one prefills name, amount and category, all still editable. On save that item becomes **checked** in Monthly, even if the amount was edited.
 - Category options: for expenses, `None` + the shared category list; for incomes, a fixed list (Salary, Freelance, Gift, Investment, Other). Switching type resets the category.
 - Effect on the account fields, applied once at save time:
 
@@ -133,7 +134,7 @@ Four kinds of entry, chosen at creation (None / Cumulative / Recurring / Budget)
 - Expense vs income is fixed at creation; special incomes behave exactly like special expenses.
 - Every change immediately moves the Balance (expenses subtract, incomes add). Cash and Savings are untouched.
 - Deleting an entry also deletes its sub-values.
-- **Budgets and transactions:** an expense transaction can be taken "From budget". It then moves Cash / Savings as usual *and* is recorded as a spend in that budget, so the Balance does not drop twice. Deleting the transaction does not remove the spend (same rule as Cash / Savings); delete the spend from the budget.
+- **Budgets and transactions:** an expense transaction can pick a budget in "Pays for". It then moves Cash / Savings as usual *and* is recorded as a spend in that budget, so the Balance does not drop twice. Deleting the transaction does not remove the spend (same rule as Cash / Savings); delete the spend from the budget.
 - A Cumulative entry that was used as a budget with negative values offers **Convert to budget**: positive values become the budget amount, negative values become spends.
 
 ### 1.7 Cross-cutting rules
@@ -151,7 +152,7 @@ Four kinds of entry, chosen at creation (None / Cumulative / Recurring / Budget)
 | 1 | Deleting a transaction does not return the money | Intentional — rule in 1.4 |
 | 2 | Balance is the same for every displayed month | Intentional — rule in 1.4 |
 | 3 | Mock data re-seeded whenever a list was empty | Removed — the app never inserts mock data |
-| 4 | "Fixed expense" picker also lists fixed incomes | Keep; variables renamed to `monthlyItems` |
+| 4 | The Monthly items offered when adding a transaction (now under "Pays for") also list fixed incomes | Keep; variables renamed to `monthlyItems` |
 | 5 | Balance read extra entries with a manual fetch | Now a `@Query` (no behaviour change) |
 | 6 | Sub-values left orphaned in the store on delete | Fixed — deletes now remove them |
 | 7 | Monthly row tap: toggle or edit? | Tap toggles the check |

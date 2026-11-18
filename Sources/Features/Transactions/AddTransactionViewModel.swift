@@ -87,8 +87,11 @@ final class AddTransactionViewModel {
     /// is not offered for the new type, so both stay valid.
     func resetCategory(storedCategories: [ExpenseCategory]) {
         category = categoryOptions(storedCategories: storedCategories)[0]
-        if kind == .income && !PaymentSource.incomeOptions.contains(paidWith) {
-            paidWith = .cash
+        if kind == .income {
+            category = Transaction.defaultIncomeCategory
+            if !PaymentSource.incomeOptions.contains(paidWith) {
+                paidWith = .cash
+            }
         }
     }
 

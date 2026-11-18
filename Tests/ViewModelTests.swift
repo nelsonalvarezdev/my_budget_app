@@ -169,6 +169,18 @@ struct AddTransactionViewModelTests {
         #expect(viewModel.paidWith == .savings)
     }
 
+    @Test func incomeDefaultsToOtherAndOffersContribution() {
+        let viewModel = AddTransactionViewModel()
+        viewModel.kind = .income
+        viewModel.resetCategory(storedCategories: [])
+        #expect(viewModel.category == "Other")
+        #expect(viewModel.categoryOptions(storedCategories: []).contains("Contribution"))
+
+        viewModel.kind = .expense
+        viewModel.resetCategory(storedCategories: [])
+        #expect(viewModel.category == AddTransactionViewModel.noCategory)
+    }
+
     @Test func expenseCategoryOptionsAreAlphabetical() {
         let viewModel = AddTransactionViewModel()
         let stored = [
@@ -225,7 +237,7 @@ struct AddTransactionViewModelTests {
         let viewModel = AddTransactionViewModel()
         viewModel.kind = .income
         viewModel.resetCategory(storedCategories: [])
-        #expect(viewModel.category == "Salary")
+        #expect(viewModel.category == "Other")
 
         viewModel.kind = .expense
         viewModel.resetCategory(storedCategories: [])

@@ -75,7 +75,7 @@ Three pages live side by side in a custom horizontal pager (`RootView`), all ali
 - Requires a non-empty name and an amount > 0.
 - An expense has one **Pays for** field: None, a Monthly item or a budget, never both. The Monthly items list only the expenses (a transaction does not pay for an income), those still to pay first and the already-checked ones greyed out at the end, still selectable. A budget prefills only the name.
 - An expense may be created from a Monthly item. Picking one prefills name, amount and category, all still editable. On save that item becomes **checked** in Monthly, even if the amount was edited.
-- Category options: for expenses, `None` + the shared category list; for incomes, a fixed list (Salary, Freelance, Gift, Investment, Other). Switching type resets the category.
+- Category options: for expenses, `None` + the shared category list; for incomes, a fixed list (Salary, Freelance, Gift, Investment, Contribution, Other). Switching type resets the category: to `None` for expenses, to `Other` for incomes.
 - Effect on the account fields, applied once at save time:
 
 | Kind | Paid with / Received by | Effect |

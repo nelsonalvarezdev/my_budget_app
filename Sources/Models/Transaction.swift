@@ -82,7 +82,9 @@ final class Transaction {
 // MARK: - Categories
 
 extension Transaction {
-    static let incomeCategories = ["Salary", "Freelance", "Gift", "Investment", "Other"]
+    static let incomeCategories = ["Salary", "Freelance", "Gift", "Investment", "Contribution", "Other"]
+    /// Category preselected when the New Transaction form switches to Income.
+    static let defaultIncomeCategory = "Other"
     static let expenseCategories = ["Groceries", "Rent", "Transport", "Dining", "Entertainment", "Health", "Utilities", "Other"]
 
     static func categories(for kind: TransactionKind) -> [String] {

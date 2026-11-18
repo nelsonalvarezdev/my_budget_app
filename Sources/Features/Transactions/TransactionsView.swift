@@ -18,7 +18,7 @@ struct TransactionsView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Pinned balance card: stays visible even when the list is scrolled.
-                BalanceHeroCard(balance: summary.balance)
+                BalanceHeroCard(balance: summary.balance, holdsChanges: viewModel.isShowingAddSheet)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(Color(.systemGroupedBackground))

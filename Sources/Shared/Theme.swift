@@ -22,6 +22,8 @@ struct HeroCard<Content: View>: View {
 struct HeroAmount: View {
     let amount: String
     var isNegative = false
+    /// Overrides the colour, e.g. while a live change is counting.
+    var tint: Color?
 
     var body: some View {
         Text(amount)
@@ -29,7 +31,7 @@ struct HeroAmount: View {
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(0.6)
-            .foregroundStyle(isNegative ? Color.red : Color.primary)
+            .foregroundStyle(tint ?? (isNegative ? Color.red : Color.primary))
     }
 }
 

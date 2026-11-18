@@ -5,6 +5,9 @@ import SwiftUI
 /// and their sum, the money available to spend.
 struct BalanceHeroCard: View {
     let balance: Decimal
+    /// While true (e.g. the New Transaction sheet is open), a change of the
+    /// Balance is held back and plays once it turns false, so it is seen.
+    var holdsChanges = false
     @Environment(AccountsStore.self) private var accounts
 
     var body: some View {
@@ -15,7 +18,7 @@ struct BalanceHeroCard: View {
                     Text("Balance")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    HeroAmount(amount: Currency.format(balance), isNegative: balance < 0)
+                    LiveBalanceAmount(balance: balance, holdsChanges: holdsChanges)
                 }
 
                 HStack(spacing: 10) {
@@ -34,6 +37,81 @@ struct BalanceHeroCard: View {
                 .font(.footnote)
             }
         }
+    }
+}
+
+/// The Balance figure, animated "live": when the Balance changes, the
+/// number counts from the old value to the new one while the changing
+/// digits roll, tinted green when it goes up and red when it goes down.
+struct LiveBalanceAmount: View {
+    let balance: Decimal
+    var holdsChanges = false
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The value currently drawn; animated towards `balance`.
+    @State private var shown: Double?
+    @State private var tint: Color?
+
+    /// Time the sheet needs to slide away before the count starts.
+    private static let sheetDismissDelay: Duration = .milliseconds(350)
+    private static let countDuration = 0.9
+
+    var body: some View {
+        CountingAmount(value: shown ?? Self.double(balance), target: balance, tint: tint)
+            .onAppear { shown = Self.double(balance) }
+            .onChange(of: balance) { _, _ in
+                if !holdsChanges { playChange() }
+            }
+            .onChange(of: holdsChanges) { _, holding in
+                guard !holding else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: Self.sheetDismissDelay)
+                    playChange()
+                }
+            }
+    }
+
+    private func playChange() {
+        let target = Self.double(balance)
+        guard let from = shown, from != target else { return }
+        guard !reduceMotion else {
+            shown = target
+            return
+        }
+        tint = target > from ? Color.brand : Color.red
+        withAnimation(.easeOut(duration: Self.countDuration)) {
+            shown = target
+        } completion: {
+            withAnimation(.easeOut(duration: 0.4)) { tint = nil }
+        }
+    }
+
+    private static func double(_ value: Decimal) -> Double {
+        NSDecimalNumber(decimal: value).doubleValue
+    }
+}
+
+/// Draws an animated amount: SwiftUI interpolates `value` frame by frame,
+/// and each frame shows it rounded to whole pesos. Once it lands on the
+/// target, the exact amount is shown.
+private struct CountingAmount: View, @preconcurrency Animatable {
+    var value: Double
+    let target: Decimal
+    let tint: Color?
+
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
+    }
+
+    private var amount: Decimal {
+        let targetDouble = NSDecimalNumber(decimal: target).doubleValue
+        return abs(value - targetDouble) < 0.5 ? target : Decimal(value.rounded())
+    }
+
+    var body: some View {
+        HeroAmount(amount: Currency.format(amount), isNegative: amount < 0, tint: tint)
+            .contentTransition(.numericText(value: value))
     }
 }
 
